@@ -1,0 +1,147 @@
+.magnet-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background-color: #f5f5f5;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.header-title {
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.filter-input {
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  font-size: 0.8rem;
+  width: 150px;
+}
+
+.links-container {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.link-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid #eee;
+  transition: background-color 0.2s;
+}
+
+.link-item:hover {
+  background-color: #f0f0f0;
+}
+
+.link-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 65%;
+}
+
+.link-title {
+  font-weight: 500;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.link-meta {
+  display: flex;
+  gap: 8px;
+  font-size: 0.75rem;
+  color: #666;
+}
+
+.seed-info {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.seed-count {
+  color: #27ae60;
+  font-weight: 600;
+}
+
+.link-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.add-button {
+  background-color: #2ecc71;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.add-button:hover {
+  background-color: #27ae60;
+}
+
+.add-button:disabled {
+  background-color: #95a5a6;
+  cursor: not-allowed;
+}
+
+.more-menu {
+  position: relative;
+}
+
+.more-button {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  line-height: 0.7;
+  cursor: pointer;
+  padding: 8px 6px;
+  border-radius: 4px;
+}
+
+.more-button:hover {
+  background-color: #eee;
+}
+
+.dropdown-menu {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  background-color: white;
+  border-radius: 4px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+  width: 160px;
+}
+
+.dropdown-menu button {
+  width: 100%;
+  text-align: left;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.dropdown-menu button:hover {
+  background-color: #f5f5f5;
+}

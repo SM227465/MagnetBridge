@@ -1,0 +1,30 @@
+{
+  "extensionDescription": {
+    "description": "Extension description",
+    "message": "Easily extract, copy, and download torrent magnet links from any webpage. Integrate with cloud torrent services like Seedr, Bitport, Put.io, and Torbox for seamless downloads."
+  },
+  "extensionName": {
+    "description": "Extension name",
+    "message": "MagnetBridge"
+  },
+  "toggleTheme": {
+    "message": "Toggle theme"
+  },
+  "loading": {
+    "message": "Loading..."
+  },
+  "greeting": {
+    "description": "Greeting message",
+    "message": "Hello, My name is $NAME$",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "John Doe"
+      }
+    }
+  },
+  "hello": {
+    "description": "Placeholder example",
+    "message": "Hello $1"
+  }
+}

@@ -1,0 +1,164 @@
+.config-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.config-modal {
+  width: 360px;
+  max-height: 550px;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.modal-header {
+  padding: 16px;
+  background-color: #2c3e50;
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 1.5rem;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.modal-content {
+  padding: 16px;
+  overflow-y: auto;
+  max-height: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.services-list h3,
+.add-service-form h3 {
+  margin-top: 0;
+  margin-bottom: 12px;
+  font-size: 1rem;
+  color: #333;
+}
+
+.no-services {
+  color: #95a5a6;
+  font-size: 0.9rem;
+  padding: 8px 0;
+}
+
+.services-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.service-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+  border-left: 3px solid #3498db;
+}
+
+.service-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.service-name {
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.service-type {
+  font-size: 0.75rem;
+  color: #666;
+}
+
+.remove-button {
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.remove-button:hover {
+  background-color: #c0392b;
+}
+
+.add-service-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-field label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #333;
+}
+
+.form-field input,
+.form-field select {
+  padding: 8px 10px;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+  font-size: 0.9rem;
+}
+
+.submit-button {
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 10px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  margin-top: 8px;
+}
+
+.submit-button:hover {
+  background-color: #2980b9;
+}
+
+.note {
+  margin: 0;
+}
