@@ -1,6 +1,6 @@
 # 🚀 Magnet Finder - Chrome Extension
 
-Magnet Finder is a powerful Chrome extension that extracts and lists torrent magnet links from any webpage. It allows users to easily copy magnet links, download .torrent files, and integrate with cloud torrent services like **Seedr, Bitport, Put.io, and Torbox**.
+Magnet Bridge is a powerful Chrome extension that extracts and lists torrent magnet links from any webpage. It allows users to easily copy magnet links, download .torrent files, and integrate with cloud torrent services like **Seedr, Bitport, Put.io, and Torbox**.
 
 ---
 
