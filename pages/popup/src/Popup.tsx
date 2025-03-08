@@ -261,7 +261,7 @@ const Popup = () => {
   return (
     <div className="app-container">
       <header className="app-header">
-        <h1>Torrent Magnet Finder</h1>
+        <h1>Torrent Magnet Bridge</h1>
         <div className="service-selector">
           {state.cloudServices.length > 0 ? (
             <select

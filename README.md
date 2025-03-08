@@ -1,4 +1,4 @@
-# 🚀 Magnet Finder - Chrome Extension
+# 🚀 Magnet Bridge - Chrome Extension
 
 Magnet Bridge is a powerful Chrome extension that extracts and lists torrent magnet links from any webpage. It allows users to easily copy magnet links, download .torrent files, and integrate with cloud torrent services like **Seedr, Bitport, Put.io, and Torbox**.
 
@@ -20,14 +20,14 @@ Magnet Bridge is a powerful Chrome extension that extracts and lists torrent mag
 2. Open **Chrome Extensions** page (`chrome://extensions/`).
 3. Enable **Developer mode** (top right corner).
 4. Click **Load unpacked** and select the extension folder.
-5. Enjoy using Magnet Finder! 🎉
+5. Enjoy using Magnet Bridge! 🎉
 
 ---
 
 ## 🔧 How to Use
 
 1. Open a webpage containing torrent magnet links.
-2. Click the **Magnet Finder** extension icon.
+2. Click the **Magnet Bridge** extension icon.
 3. View all extracted magnet links in the popup.
 4. Copy, download, or send torrents to your preferred cloud service. 🚀
 
@@ -68,7 +68,7 @@ For any issues or feature requests, please open an issue in the repository or co
 
 ## 📜 License
 
-MIT License © 2025 Magnet Finder
+MIT License © 2025 Magnet Bridge
 
 ---
 
