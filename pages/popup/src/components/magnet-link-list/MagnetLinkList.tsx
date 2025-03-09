@@ -49,11 +49,11 @@ const MagnetLinkList = (props: Props) => {
       </div>
 
       <ul className="links-container">
-        {links.map(link => (
+        {links.map((link, index) => (
           <li key={link.id} className="link-item">
             <div className="link-info">
               <span className="link-title" title={link.title}>
-                {link.title || 'Unnamed torrent'}
+                {index + 1}. {link.title || 'Unnamed torrent'}
               </span>
               <div className="link-meta">
                 {formatSize(link.size)}
