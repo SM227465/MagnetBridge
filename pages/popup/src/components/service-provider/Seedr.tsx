@@ -6,15 +6,15 @@ interface Props {
   setFormData: Dispatch<SetStateAction<Omit<CloudService, 'id'>>>;
 }
 
-const Torbox = (props: Props) => {
+const Seedr = (props: Props) => {
   const { formData, setFormData } = props;
 
   useEffect(() => {
     setFormData(prev => ({
       ...prev,
-      name: 'Torbox',
-      url: 'https://torbox.app',
-      api: 'https://api.torbox.app/v1/api/torrents/createtorrent',
+      name: 'Seedr',
+      url: 'https://www.seedr.cc',
+      api: 'https://www.seedr.cc/rest/transfer/magnet',
     }));
   }, []);
 
@@ -40,17 +40,27 @@ const Torbox = (props: Props) => {
         required
       />
 
-      <label>API Key</label>
+      <label>Email</label>
+      <input
+        type="text"
+        name="email"
+        value={formData.email}
+        onChange={handleInputChange}
+        placeholder="Enter your email"
+        required
+      />
+
+      <label>Password</label>
       <input
         type="password"
-        name="apiKey"
-        value={formData.apiKey}
+        name="password"
+        value={formData.password}
         onChange={handleInputChange}
-        placeholder="Enter your API key"
+        placeholder="Enter your password"
         required
       />
     </div>
   );
 };
 
-export default Torbox;
+export default Seedr;

@@ -3,6 +3,7 @@ import { CloudService, SupportedCTSP } from '@src/interface';
 import { type ChangeEvent, type FormEvent, type MouseEvent, useState } from 'react';
 import Torbox from '../service-provider/Torbox';
 import './CloudServiceConfig.css';
+import Seedr from '../service-provider/Seedr';
 
 interface CloudServiceConfigProps {
   services: CloudService[];
@@ -97,7 +98,7 @@ const CloudServiceConfig: React.FC<CloudServiceConfigProps> = ({ services, onAdd
                     Please select a service provider
                   </option>
                   <option value="putio">Put.io</option>
-                  <option value="seedr">Seedr.cc</option>
+                  <option value="seedr">Seedr</option>
                   <option value="torbox">TorBox</option>
                   <option value="bitport">BitPort</option>
                   <option value="custom">Custom</option>
@@ -105,6 +106,7 @@ const CloudServiceConfig: React.FC<CloudServiceConfigProps> = ({ services, onAdd
               </div>
 
               {selectedServiceProvider === 'torbox' && <Torbox formData={formData} setFormData={setFormData} />}
+              {selectedServiceProvider === 'seedr' && <Seedr formData={formData} setFormData={setFormData} />}
 
               {selectedServiceProvider && (
                 <p className="note">

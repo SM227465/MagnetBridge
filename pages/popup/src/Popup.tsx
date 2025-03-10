@@ -5,7 +5,7 @@ import EmptyState from './components/empty-state/EmptyState';
 import MagnetLinkList from './components/magnet-link-list/MagnetLinkList';
 import Notification from './components/notification/Notification';
 import { AppState, CloudService, MagnetLink } from './interface';
-import { addToTorbox } from './utils';
+import { addToSeedr, addToTorbox } from './utils';
 import '@src/Popup.css';
 
 const fetchedMagnetLinks = new Set<string>();
@@ -232,6 +232,7 @@ const Popup = () => {
       case 'putio':
         break;
       case 'seedr':
+        res = await addToSeedr(service, magnetUrl);
         break;
       default:
     }
