@@ -1,12 +1,12 @@
 import { withErrorBoundary, withSuspense } from '@extension/shared';
-import { useEffect, useRef, useState } from 'react';
-import { AppState, CloudService, MagnetLink } from './interface';
-import MagnetLinkList from './components/magnet-link-list/MagnetLinkList';
-import EmptyState from './components/empty-state/EmptyState';
-import Notification from './components/notification/Notification';
-import '@src/Popup.css';
+import { useEffect, useState } from 'react';
 import CloudServiceConfig from './components/cloud-service-config/CloudServiceConfig';
+import EmptyState from './components/empty-state/EmptyState';
+import MagnetLinkList from './components/magnet-link-list/MagnetLinkList';
+import Notification from './components/notification/Notification';
+import { AppState, CloudService, MagnetLink } from './interface';
 import { addToTorbox } from './utils';
+import '@src/Popup.css';
 
 const fetchedMagnetLinks = new Set<string>();
 
@@ -83,7 +83,7 @@ const Popup = () => {
   //   }, 2000);
   // }, [state.magnetLinks]);
 
-  // const fetchTorrentMetadata = async (magnet: MagnetLink) => {
+  // const fetchTorrentMetadata = async (magnet: MagnetLink)=> {
   //   return new Promise<MagnetLink>((resolve, reject) => {
   //     if (fetchedMagnetLinks.has(magnet.url)) {
   //       return resolve(magnet); // Skip if already fetched
@@ -106,20 +106,23 @@ const Popup = () => {
 
   const handleAddCloudService = (service: CloudService) => {
     const updatedServices = [...state.cloudServices, service];
+
     setState(prevState => ({
       ...prevState,
       cloudServices: updatedServices,
       selectedService: service.id,
     }));
+
     chrome.storage.sync.set({
       cloudServices: updatedServices,
       selectedService: service.id,
     });
-    showNotification(`${service.name} added successfully`, 'success');
+
+    showNotification(`${service.name} configured successfully`, 'success');
   };
 
   const handleRemoveCloudService = (serviceId: string) => {
-    const updatedServices = state.cloudServices.filter(s => s.id !== serviceId);
+    const updatedServices = state.cloudServices.filter(cloudService => cloudService.id !== serviceId);
     const newSelectedService = updatedServices.length > 0 ? updatedServices[0].id : null;
 
     setState(prevState => ({
@@ -218,16 +221,12 @@ const Popup = () => {
   };
 
   const addToCloudService = async (magnetUrl: string, service: CloudService) => {
-    // This is a simplified implementation
-    // In reality, each service would have its own API implementation
-    const endpoint = service.apiUrl;
-
     console.log('is it here', service);
 
     let res;
     switch (service.type) {
       case 'torbox':
-        res = await addToTorbox(magnetUrl);
+        res = await addToTorbox(service, magnetUrl);
         break;
 
       case 'putio':
@@ -261,7 +260,7 @@ const Popup = () => {
   return (
     <div className="app-container">
       <header className="app-header">
-        <h1>Torrent Magnet Bridge</h1>
+        <h1>Magnet Bridge</h1>
         <div className="service-selector">
           {state.cloudServices.length > 0 ? (
             <select

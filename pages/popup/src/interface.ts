@@ -11,9 +11,12 @@ export interface MagnetLink {
 export interface CloudService {
   id: string;
   name: string;
-  apiKey: string;
-  apiUrl: string;
-  type: '' | 'putio' | 'seedr' | 'torbox' | 'bitport' | 'custom';
+  url: string;
+  apiKey?: string;
+  email?: string;
+  password?: string;
+  api: string;
+  type: SupportedCTSP;
 }
 
 export interface AppState {
@@ -29,3 +32,5 @@ export interface AppState {
     type: 'success' | 'error' | 'info';
   };
 }
+
+export type SupportedCTSP = '' | 'putio' | 'seedr' | 'torbox' | 'bitport' | 'custom';

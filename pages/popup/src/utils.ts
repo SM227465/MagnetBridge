@@ -1,16 +1,14 @@
-import { config } from './config';
+import { type CloudService } from './interface';
 
-export const addToTorbox = async (magnetUrl: string) => {
+export const addToTorbox = async (service: CloudService, magnetUrl: string) => {
   const payload = new FormData();
-
   payload.append('magnet', magnetUrl);
-  const url = `${config.TORBOX.BASE_API}/${config.TORBOX.VERSION}/${config.TORBOX.PATH}`;
 
   try {
-    const response = await fetch(url, {
-      method: config.TORBOX.METHOD,
+    const response = await fetch(service.api, {
+      method: 'POST',
       headers: {
-        Authorization: `Bearer ${config.TORBOX.KEY}`,
+        Authorization: `Bearer ${service.apiKey}`,
       },
       body: payload,
     });

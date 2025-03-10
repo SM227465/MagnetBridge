@@ -66,7 +66,6 @@
 .no-services {
   color: #95a5a6;
   font-size: 0.9rem;
-  padding: 8px 0;
 }
 
 .services-list ul {
@@ -142,6 +141,14 @@
   border-radius: 4px;
   border: 1px solid #ddd;
   font-size: 0.9rem;
+}
+
+.form-field select {
+  cursor: pointer;
+}
+
+.options {
+  cursor: pointer;
 }
 
 .submit-button {
