@@ -26,7 +26,7 @@
 }
 
 .links-container {
-  height: 150px;
+  height: 400px;
   max-height: 445px;
   overflow-y: auto;
   list-style: none;
