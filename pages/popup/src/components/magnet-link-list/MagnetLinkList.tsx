@@ -1,4 +1,4 @@
-import { MagnetLink } from '@src/interface';
+import { CloudService, MagnetLink } from '@src/interface';
 import { useState } from 'react';
 import SpinnerMini from '../spinner-mini/SpinnerMini';
 import './MagnetLinkList.css';
@@ -9,10 +9,11 @@ interface Props {
   onDownloadClick: (link: MagnetLink) => void;
   onCopyClick: (link: MagnetLink) => void;
   isServiceConfigured: boolean;
+  service: CloudService;
 }
 
 const MagnetLinkList = (props: Props) => {
-  const { isServiceConfigured, links, onAddClick, onCopyClick, onDownloadClick } = props;
+  const { isServiceConfigured, service, links, onAddClick, onCopyClick, onDownloadClick } = props;
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
@@ -42,9 +43,33 @@ const MagnetLinkList = (props: Props) => {
   return (
     <div className="magnet-list">
       <div className="list-header">
-        <span className="header-title">Found {links.length} magnet links</span>
+        <span className="header-title">
+          Found {links.length} magnet {links.length > 1 ? 'links' : 'link'}
+        </span>
         <span className="header-filter">
-          <input type="text" placeholder="Filter links..." className="filter-input" />
+          <select value="" onChange={() => {}} className="filter-input">
+            <option value="" disabled>
+              Sort by
+            </option>
+            <option value="custom" disabled>
+              Size: Small to Big
+            </option>
+            <option value="custom" disabled>
+              Size: Big to Small
+            </option>
+            <option value="custom" disabled>
+              Name: A to Z
+            </option>
+            <option value="custom" disabled>
+              Name: Z to A
+            </option>
+            <option value="custom" disabled>
+              Seed: High to Low
+            </option>
+            <option value="custom" disabled>
+              Seed: Low to High
+            </option>
+          </select>
         </span>
       </div>
 
@@ -72,7 +97,7 @@ const MagnetLinkList = (props: Props) => {
                   className="add-button"
                   onClick={() => handleAddClick(link)}
                   disabled={!isServiceConfigured}
-                  title={isServiceConfigured ? 'Add to cloud service' : 'Configure a cloud service first'}>
+                  title={isServiceConfigured ? `Add to ${service.name}` : 'Configure a cloud service first'}>
                   Add
                 </button>
               )}
@@ -82,8 +107,16 @@ const MagnetLinkList = (props: Props) => {
                 </button>
                 {openMenuId === link.id && (
                   <div className="dropdown-menu">
-                    <button onClick={() => onCopyClick(link)}>Copy magnet URL</button>
-                    <button onClick={() => onDownloadClick(link)}>Download .torrent file</button>
+                    <button
+                      onClick={() => {
+                        onCopyClick(link);
+                        setOpenMenuId(null);
+                      }}>
+                      Copy
+                    </button>
+                    <button disabled onClick={() => onDownloadClick(link)}>
+                      Download
+                    </button>
                   </div>
                 )}
               </div>
