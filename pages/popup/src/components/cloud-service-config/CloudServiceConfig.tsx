@@ -2,6 +2,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { CloudService, SupportedCTSP } from '@src/interface';
 import { type ChangeEvent, type FormEvent, type MouseEvent, useState } from 'react';
 import Torbox from '../service-provider/Torbox';
+import Seedr from '../service-provider/Seedr';
+import { SUPPORTED_CTSP } from '@src/data/supported-sp';
 import './CloudServiceConfig.css';
 
 interface CloudServiceConfigProps {
@@ -96,19 +98,24 @@ const CloudServiceConfig: React.FC<CloudServiceConfigProps> = ({ services, onAdd
                   <option value="" disabled>
                     Please select a service provider
                   </option>
-                  <option value="putio">Put.io</option>
-                  <option value="seedr">Seedr.cc</option>
-                  <option value="torbox">TorBox</option>
-                  <option value="bitport">BitPort</option>
-                  <option value="custom">Custom</option>
+                  {SUPPORTED_CTSP.map(ctsp => (
+                    <option disabled={!ctsp.isAvailable} value={ctsp.value}>
+                      {ctsp.name}
+                    </option>
+                  ))}
+
+                  <option value="custom" disabled>
+                    Custom
+                  </option>
                 </select>
               </div>
 
               {selectedServiceProvider === 'torbox' && <Torbox formData={formData} setFormData={setFormData} />}
+              {selectedServiceProvider === 'seedr' && <Seedr formData={formData} setFormData={setFormData} />}
 
               {selectedServiceProvider && (
                 <p className="note">
-                  API Key / Token is stored locally using{' '}
+                  Key/Secret is stored locally using{' '}
                   <a href="#" onClick={navigateToDocsPage}>
                     Chrome Sync Storage
                   </a>

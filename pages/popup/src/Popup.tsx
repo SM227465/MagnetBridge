@@ -5,7 +5,7 @@ import EmptyState from './components/empty-state/EmptyState';
 import MagnetLinkList from './components/magnet-link-list/MagnetLinkList';
 import Notification from './components/notification/Notification';
 import { AppState, CloudService, MagnetLink } from './interface';
-import { addToTorbox } from './utils';
+import { addToSeedr, addToTorbox } from './utils';
 import '@src/Popup.css';
 
 const fetchedMagnetLinks = new Set<string>();
@@ -191,6 +191,7 @@ const Popup = () => {
       type: 'DOWNLOAD_TORRENT',
       payload: { url: link.url, filename: `${link.title || 'torrent'}.torrent` },
     });
+
     showNotification('Downloading torrent file...', 'info');
   };
 
@@ -232,23 +233,10 @@ const Popup = () => {
       case 'putio':
         break;
       case 'seedr':
+        res = await addToSeedr(service, magnetUrl);
         break;
       default:
     }
-
-    // const response = await fetch(endpoint, {
-    //   method: 'POST',
-    //   headers: {
-    //     'Content-Type': 'application/x-www-form-urlencoded',
-    //   },
-    //   body: params.toString(),
-    // });
-
-    // if (!response.ok) {
-    //   throw new Error('Failed to add torrent to cloud service');
-    // }
-
-    console.log(res);
 
     if (!res?.['success']) {
       throw new Error(res?.['detail'] || 'Failed to add torrent to cloud service');
@@ -291,6 +279,7 @@ const Popup = () => {
             onDownloadClick={handleDownloadTorrent}
             onCopyClick={handleCopyMagnet}
             isServiceConfigured={state.cloudServices.length > 0}
+            service={state.cloudServices[0]}
           />
         ) : (
           <EmptyState
