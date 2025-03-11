@@ -1,0 +1,61 @@
+name: Build, Zip, and Release Chrome Extension
+
+on:
+  push:
+    branches: [ main, dev ]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: pnpm
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: Build Extension
+        run: pnpm build
+
+      - name: Zip the Extension
+        run: |
+          cd dist
+          zip -r ../chrome-extension.zip .
+
+      - name: Upload Zip as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: chrome-extension
+          path: chrome-extension.zip
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download Built Extension
+        uses: actions/download-artifact@v4
+        with:
+          name: chrome-extension
+          path: .
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: chrome-extension.zip
+          tag_name: v1.0.${{ github.run_number }}
+          release_name: Chrome Extension v1.0.${{ github.run_number }}
+          body: "New Chrome extension build available for download."
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
