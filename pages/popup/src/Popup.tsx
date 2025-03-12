@@ -8,8 +8,6 @@ import { AppState, CloudService, MagnetLink } from './interface';
 import { addToSeedr, addToTorbox } from './utils';
 import '@src/Popup.css';
 
-const fetchedMagnetLinks = new Set<string>();
-
 const Popup = () => {
   const [state, setState] = useState<AppState>({
     magnetLinks: [],
@@ -25,12 +23,7 @@ const Popup = () => {
     },
   });
 
-  // const fetchTimeout = useRef<NodeJS.Timeout | null>(null); // To debounce metadata fetch
-  // const client = useRef(new WebTorrent()); // WebTorrent client instance
-
   useEffect(() => {
-    console.log('hello');
-
     // Initialize state from chrome.storage
     chrome.storage.sync.get(['cloudServices', 'selectedService'], result => {
       setState(prevState => ({
@@ -58,51 +51,6 @@ const Popup = () => {
       }
     });
   }, []);
-
-  // useEffect(() => {
-  //   console.log('here');
-
-  //   if (fetchTimeout.current) {
-  //     clearTimeout(fetchTimeout.current);
-  //   }
-
-  //   console.log('here 2');
-
-  //   // Set a delay (e.g., 2 seconds) before fetching metadata
-  //   fetchTimeout.current = setTimeout(async () => {
-  //     const newLinks = state.magnetLinks.filter(link => !fetchedMagnetLinks.has(link.url));
-  //     if (newLinks.length === 0) return;
-
-  //     const updatedLinks = await Promise.all(newLinks.map(fetchTorrentMetadata));
-  //     console.log({ updatedLinks });
-
-  //     setState(prev => ({
-  //       ...prev,
-  //       magnetLinks: prev.magnetLinks.map(link => updatedLinks.find(updated => updated.url === link.url) || link),
-  //     }));
-  //   }, 2000);
-  // }, [state.magnetLinks]);
-
-  // const fetchTorrentMetadata = async (magnet: MagnetLink)=> {
-  //   return new Promise<MagnetLink>((resolve, reject) => {
-  //     if (fetchedMagnetLinks.has(magnet.url)) {
-  //       return resolve(magnet); // Skip if already fetched
-  //     }
-
-  //     client.current.add(magnet.url, torrent => {
-  //       fetchedMagnetLinks.add(magnet.url); // Mark as fetched
-  //       resolve({
-  //         ...magnet,
-  //         title: torrent.name || magnet.title,
-  //         size: (torrent.length / (1024 * 1024)).toFixed(2) + ' MB', // Convert to MB
-  //         seeds: torrent.numPeers,
-  //         peers: torrent.numPeers,
-  //       });
-  //     });
-
-  //     setTimeout(() => reject('Timeout fetching metadata'), 15000);
-  //   });
-  // };
 
   const handleAddCloudService = (service: CloudService) => {
     const updatedServices = [...state.cloudServices, service];
@@ -222,9 +170,8 @@ const Popup = () => {
   };
 
   const addToCloudService = async (magnetUrl: string, service: CloudService) => {
-    console.log('is it here', service);
-
     let res;
+
     switch (service.type) {
       case 'torbox':
         res = await addToTorbox(service, magnetUrl);
@@ -275,6 +222,7 @@ const Popup = () => {
         {state.magnetLinks.length > 0 ? (
           <MagnetLinkList
             links={state.magnetLinks}
+            setState={setState}
             onAddClick={handleAddTorrent}
             onDownloadClick={handleDownloadTorrent}
             onCopyClick={handleCopyMagnet}
