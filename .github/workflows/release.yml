@@ -1,27 +1,51 @@
-name: Build And Upload Extension Zip Via Artifact
+name: Build And Release Extension
 
 on:
   push:
-    branches: [ main, dev ]
-  pull_request:
+    branches:
+      - '**'
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version-file: '.nvmrc'
           cache: pnpm
 
-      - run: pnpm install --frozen-lockfile --prefer-offline
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile --prefer-offline
 
-      - run: pnpm build
+      - name: Build Extension
+        run: pnpm build
 
-      - uses: actions/upload-artifact@v4
+      - name: Zip the Dist Folder
+        run: zip -r extension.zip dist
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: ncipollo/release-action@v1
         with:
-          path: dist/*
+          tag: v0.4.${{ github.run_number }} # Auto-increment version
+          name: Release v0.4.${{ github.run_number }}
+          body: "New build of the Chrome extension."
+          draft: false
+          prerelease: false
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./extension.zip
+          asset_name: extension.zip
+          asset_content_type: application/zip
