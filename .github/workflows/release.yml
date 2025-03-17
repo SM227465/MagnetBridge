@@ -2,11 +2,10 @@ name: Build And Release Extension
 
 on:
   push:
-    branches:
-      - '**'
+    branches: [develop]
 
 permissions:
-  contents: write  # Allows GITHUB_TOKEN to create releases
+  contents: write
 
 jobs:
   build:
@@ -38,12 +37,12 @@ jobs:
         id: create_release
         uses: ncipollo/release-action@v1
         with:
-          tag: v0.4.${{ github.run_number }}
-          name: Release v0.4.${{ github.run_number }}
+          tag: v1.0.${{ github.run_number }}
+          name: Release v1.0.${{ github.run_number }}
           body: "New build of the Chrome extension."
           draft: false
           prerelease: false
-          token: ${{ secrets.GITHUB_TOKEN }}  # Use GITHUB_TOKEN instead
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
