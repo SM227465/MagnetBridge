@@ -17,22 +17,29 @@ const MagnetLinkList = (props: Props) => {
   const { isServiceConfigured, service, links, onAddClick, onCopyClick, onDownloadClick, setState } = props;
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [isFetching, setIsFetching] = useState(false);
+  const [isAding, setIsAding] = useState(false);
 
   const toggleMenu = (id: string) => {
     setOpenMenuId(openMenuId === id ? null : id);
   };
 
   const handleAddClick = async (link: MagnetLink) => {
+    setIsAding(true);
     setLoadingId(link.id);
     try {
       await onAddClick(link);
     } finally {
       setLoadingId(null);
+      setIsAding(false);
     }
   };
 
   const fetchTorrentInfo = async (magnetLink: MagnetLink) => {
     const api = 'https://node-express-ts.onrender.com/api/v1/torrent/info';
+
+    setIsFetching(true);
+    setLoadingId(magnetLink.id);
 
     try {
       const response = await fetch(api, {
@@ -63,6 +70,9 @@ const MagnetLinkList = (props: Props) => {
           ...prevState,
           magnetLinks: updatedLinks,
         }));
+
+        setIsFetching(false);
+        setLoadingId(null);
       }
 
       console.log({ res });
@@ -70,17 +80,9 @@ const MagnetLinkList = (props: Props) => {
       console.log({ error });
 
       // return error;
+      setIsFetching(false);
+      setLoadingId(null);
     }
-  };
-
-  const formatSize = (size?: string) => {
-    if (!size) return 'Unknown size';
-    return size;
-  };
-
-  const formatSeeds = (seeds?: number) => {
-    if (seeds === undefined) return '';
-    return `${seeds} seeds`;
   };
 
   return (
@@ -123,25 +125,33 @@ const MagnetLinkList = (props: Props) => {
               <span className="link-title" title={link.title}>
                 {index + 1}. {link.title || 'Unnamed torrent'}
               </span>
-              <div className="link-meta">
+              {/* <div className="link-meta">
                 {formatSize(link.formatedSize)}
                 {link.peers !== undefined && (
                   <span className="seed-info">
                     <span className="seed-count">{link.peers}</span> peers
                   </span>
                 )}
+              </div> */}
+
+              {/* start */}
+              <div className="badge-container">
+                <span className="badge size-badge">{link.actualSize ? link.formatedSize : 'Size: Unknown'}</span>
+
+                <span className="badge peers-badge">Peers: {link?.peers ? link.peers : '--'}</span>
+                <span className="badge leech-badge">
+                  <button
+                    className="fetch-info-btn"
+                    onClick={() => fetchTorrentInfo(link)}
+                    disabled={isFetching && loadingId === link.id}
+                    title="Fetch torrent meta-data">
+                    {isFetching && loadingId === link.id ? 'Fetching' : 'Fetch'}
+                  </button>
+                </span>
               </div>
             </div>
             <div className="link-actions">
-              <button
-                className="add-button"
-                onClick={() => fetchTorrentInfo(link)}
-                disabled={!isServiceConfigured}
-                title={isServiceConfigured ? `Add to ${service.name}` : 'Configure a cloud service first'}>
-                Fetch
-              </button>
-
-              {loadingId === link.id ? (
+              {loadingId === link.id && isAding ? (
                 <SpinnerMini />
               ) : (
                 <button

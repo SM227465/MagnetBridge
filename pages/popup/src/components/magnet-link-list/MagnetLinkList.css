@@ -148,3 +148,45 @@
 .dropdown-menu button:hover {
   background-color: #f5f5f5;
 }
+
+.badge-container {
+  display: flex;
+  gap: 2px;
+  margin-top: 4px;
+  flex-wrap: nowrap;
+}
+
+.badge {
+  padding: 2px 8px;
+  font-size: 12px;
+  border-radius: 12px;
+  display: inline-block;
+}
+
+.size-badge {
+  background-color: #f1f5f9;
+  color: #64748b;
+}
+
+.seeds-badge {
+  background-color: #dcfce7;
+  color: #15803d;
+}
+
+.peers-badge {
+  background-color: #dbeafe;
+  color: #1d4ed8;
+}
+
+.leech-badge {
+  background-color: #fef3c7;
+  color: #b45309;
+}
+
+.fetch-info-btn {
+  border: none;
+  outline: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+}
