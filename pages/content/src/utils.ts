@@ -8,6 +8,7 @@ interface MagnetLink {
   seeds?: number;
   peers?: number;
   timestamp: number;
+  actualSize?: number;
 }
 
 const MAGNET_REGEX = /magnet:\?xt=urn:btih:[a-zA-Z0-9]*/g;
@@ -30,8 +31,13 @@ export const findMagnetLinks = (): MagnetLink[] => {
       url: href,
       title: extractTitleFromMagnet(href),
       timestamp: Date.now(),
+      size: undefined,
+      peers: undefined,
+      actualSize: undefined,
     });
   });
+
+  console.log(foundUrls);
 
   const pageText = document.body.innerText;
   const magnetMatches = pageText.match(MAGNET_REGEX);

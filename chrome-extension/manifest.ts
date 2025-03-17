@@ -60,7 +60,7 @@ const manifest = {
   devtools_page: 'devtools/index.html',
   web_accessible_resources: [
     {
-      resources: ['*.js', '*.css', '*.svg', 'icon-128.png', 'icon-34.png', 'webtorrent.min.js'],
+      resources: ['*.js', '*.css', '*.svg', 'icon-128.png', 'icon-34.png'],
       matches: ['*://*/*'],
     },
   ],

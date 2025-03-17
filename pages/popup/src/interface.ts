@@ -2,7 +2,8 @@ export interface MagnetLink {
   id: string;
   url: string;
   title: string;
-  size?: string;
+  formatedSize?: string;
+  actualSize: string;
   seeds?: number;
   peers?: number;
   timestamp: number;
