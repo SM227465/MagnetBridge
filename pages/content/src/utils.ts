@@ -72,36 +72,8 @@ const enrichLinkMetadata = (link: MagnetLink): void => {
     collectMetadataFromSnowfl(link);
   }
 
-  // Look for nearby size information
-  const elements = Array.from(document.querySelectorAll('*'));
-
-  // console.log('here');
-  for (const el of elements) {
-    if (el.textContent?.includes(link.title)) {
-      // console.log('is it here', el);
-
-      const parentText = el.parentElement?.textContent || '';
-
-      // Try to find size info
-      const sizeMatch = parentText.match(/(\d+(\.\d+)?\s*(GB|MB|KB))/i);
-      if (sizeMatch) {
-        link.formatedSize = sizeMatch[0];
-      }
-
-      // Try to find seeds info
-      const seedsMatch = parentText.match(/(\d+)\s*seeds/i);
-      if (seedsMatch) {
-        link.seeds = parseInt(seedsMatch[1], 10);
-      }
-
-      // Try to find peers/leechers info
-      const peersMatch = parentText.match(/(\d+)\s*peers/i) || parentText.match(/(\d+)\s*leechers/i);
-      if (peersMatch) {
-        link.peers = parseInt(peersMatch[1], 10);
-      }
-
-      break;
-    }
+  if (window.location.hostname === 'thepiratebay.org') {
+    collectMetadataFromThepiratebay(link);
   }
 };
 
@@ -109,29 +81,104 @@ const collectMetadataFromSnowfl = (magnetLink: MagnetLink) => {
   const xpath = `//a[contains(@href, "${magnetLink.url}")]`;
   const result = document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
 
-  if (result.singleNodeValue) {
-    const torrentElement = result.singleNodeValue as Element;
-    const resultItem = torrentElement.closest('.result-item') as HTMLElement | null;
-
-    if (resultItem) {
-      magnetLink.seeds = resultItem.querySelector('.seed')?.textContent?.trim() || '--';
-      magnetLink.peers = resultItem.querySelector('.leech')?.textContent?.trim() || '--';
-      magnetLink.formatedSize = resultItem.querySelector('.size')?.textContent?.trim() || '--';
-      magnetLink.actualSize = parseSize(magnetLink.formatedSize);
-    }
+  if (!result.singleNodeValue) {
+    return;
   }
+
+  const torrentElement = result.singleNodeValue as Element;
+  const resultItem = torrentElement.closest('.result-item') as HTMLElement | null;
+
+  if (!resultItem) {
+    return;
+  }
+
+  magnetLink.seeds = resultItem.querySelector('.seed')?.textContent?.trim() || '--';
+  magnetLink.peers = resultItem.querySelector('.leech')?.textContent?.trim() || '--';
+  magnetLink.formatedSize = resultItem.querySelector('.size')?.textContent?.trim() || '--';
+  magnetLink.actualSize = parseSize(magnetLink.formatedSize);
+
+  if (magnetLink.title !== 'Unnamed torrent') {
+    return;
+  }
+
+  magnetLink.title =
+    resultItem
+      .querySelector('.name')
+      ?.textContent?.trim()
+      ?.replace(/\(\d+\)\s*/, '') || 'Unnamed torrent';
+};
+
+const collectMetadataFromThepiratebay = (magnetLink: MagnetLink) => {
+  const magnetElement = document.querySelector(`a[href^="${magnetLink.url}"]`);
+
+  if (!magnetElement) {
+    return;
+  }
+
+  const listItem = magnetElement.closest('.list-entry') as HTMLElement | null;
+
+  if (!listItem) {
+    return;
+  }
+
+  magnetLink.seeds = listItem.querySelector('.item-seed')?.textContent?.trim() || '--';
+  magnetLink.peers = listItem.querySelector('.item-leech')?.textContent?.trim() || '--';
+
+  const sizeElement = listItem.querySelector('.item-size');
+  const hiddenInput = sizeElement?.querySelector('input[name="size"]') as HTMLInputElement | null;
+
+  if (!hiddenInput) {
+    return;
+  }
+
+  magnetLink.actualSize = Number(hiddenInput.value);
+  magnetLink.formatedSize = formatBytes(magnetLink.actualSize);
+
+  if (magnetLink.title !== 'Unnamed torrent') {
+    return;
+  }
+
+  magnetLink.title = listItem.querySelector('.item-name a')?.textContent?.trim() || 'Unnamed torrent';
 };
 
 const parseSize = (sizeStr: string): number => {
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
-  const [value, unit] = sizeStr.split(' ');
-  const numValue = parseFloat(value);
-  const index = sizes.indexOf(unit);
+  const k1024 = 1024; // Binary base
+  const k1000 = 1000; // SI base
 
-  if (index === -1 || isNaN(numValue)) {
-    throw new Error('Invalid size format');
+  // SI (Decimal) & Binary (IEC) Units
+  const binaryUnits = ['Bytes', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB', 'YiB'];
+  const siUnits = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+
+  // Extract numeric value and unit
+  const [value, unit] = sizeStr.split(' ');
+
+  // Convert value to a number
+  const numValue = parseFloat(value);
+  if (isNaN(numValue)) throw new Error('Invalid size format');
+
+  // Determine whether it's a binary (IEC) or SI unit
+  let index = binaryUnits.indexOf(unit);
+  let base = k1024; // Default to binary (IEC) if found in binary units
+
+  if (index === -1) {
+    index = siUnits.indexOf(unit);
+    base = k1000; // Switch to SI base if found in SI units
   }
 
-  return Math.round(numValue * Math.pow(k, index));
+  if (index === -1) throw new Error('Unknown unit format');
+
+  // Convert to bytes
+  return Math.round(numValue * Math.pow(base, index));
+};
+
+const formatBytes = (bytes: number, decimals = 2): string => {
+  if (bytes === 0) {
+    return '0 Bytes';
+  }
+
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(decimals))} ${sizes[i]}`;
 };
