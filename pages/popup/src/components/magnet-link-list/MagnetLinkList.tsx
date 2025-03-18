@@ -137,8 +137,8 @@ const MagnetLinkList = (props: Props) => {
               {/* start */}
               <div className="badge-container">
                 <span className="badge size-badge">{link.actualSize ? link.formatedSize : 'Size: Unknown'}</span>
-
-                <span className="badge peers-badge">Peers: {link?.peers ? link.peers : '--'}</span>
+                <span className="badge seeds-badge">S: {link?.seeds ? link.seeds : '--'}</span>
+                <span className="badge peers-badge">P: {link?.peers ? link.peers : '--'}</span>
                 <span className="badge leech-badge">
                   <button
                     className="fetch-info-btn"
