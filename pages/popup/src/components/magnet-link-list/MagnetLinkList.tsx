@@ -125,16 +125,6 @@ const MagnetLinkList = (props: Props) => {
               <span className="link-title" title={link.title}>
                 {index + 1}. {link.title || 'Unnamed torrent'}
               </span>
-              {/* <div className="link-meta">
-                {formatSize(link.formatedSize)}
-                {link.peers !== undefined && (
-                  <span className="seed-info">
-                    <span className="seed-count">{link.peers}</span> peers
-                  </span>
-                )}
-              </div> */}
-
-              {/* start */}
               <div className="badge-container">
                 <span className="badge size-badge">{link.actualSize ? link.formatedSize : 'Size: Unknown'}</span>
                 <span className="badge seeds-badge">S: {link?.seeds ? link.seeds : '--'}</span>
@@ -143,9 +133,15 @@ const MagnetLinkList = (props: Props) => {
                   <button
                     className="fetch-info-btn"
                     onClick={() => fetchTorrentInfo(link)}
-                    disabled={isFetching && loadingId === link.id}
+                    disabled={(isFetching && loadingId === link.id) || Boolean(link?.seeds) || Boolean(link?.peers)}
                     title="Fetch torrent meta-data">
                     {isFetching && loadingId === link.id ? 'Fetching' : 'Fetch'}
+                  </button>
+                </span>
+
+                <span className="badge leech-badge">
+                  <button className="fetch-info-btn" title="Options" onClick={() => toggleMenu(link.id)}>
+                    •••
                   </button>
                 </span>
               </div>
@@ -162,10 +158,8 @@ const MagnetLinkList = (props: Props) => {
                   Add
                 </button>
               )}
+
               <div className="more-menu">
-                <button className="more-button" onClick={() => toggleMenu(link.id)}>
-                  •••
-                </button>
                 {openMenuId === link.id && (
                   <div className="dropdown-menu">
                     <button
@@ -173,10 +167,10 @@ const MagnetLinkList = (props: Props) => {
                         onCopyClick(link);
                         setOpenMenuId(null);
                       }}>
-                      Copy
+                      Copy magnet link
                     </button>
                     <button disabled onClick={() => onDownloadClick(link)}>
-                      Download
+                      Download (.torrent)
                     </button>
                   </div>
                 )}
