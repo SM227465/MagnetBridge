@@ -2,11 +2,11 @@ export interface MagnetLink {
   id: string;
   url: string;
   title: string;
-  formatedSize?: string;
-  actualSize: string;
   seeds?: number;
   peers?: number;
   timestamp: number;
+  actualSize?: number;
+  formatedSize?: string;
 }
 
 export interface CloudService {
