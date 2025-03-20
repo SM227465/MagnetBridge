@@ -1,30 +1,307 @@
-.App {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  text-align: center;
-  height: 100%;
-  padding: 1rem;
-}
-
-.App-logo {
-  height: 50vmin;
-  margin-bottom: 1rem;
-}
-
-.App-header {
-  height: 100%;
+.side-panel {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans',
+    'Helvetica Neue', sans-serif;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  overflow-y: auto;
+  padding: 16px;
+  transition:
+    background-color 0.3s,
+    color 0.3s;
 }
 
-code {
-  background: rgba(148, 163, 184, 0.5);
-  border-radius: 0.25rem;
-  padding: 0.2rem 0.5rem;
+/* Light theme (default) */
+.light-theme {
+  background-color: #ffffff;
+  color: #333;
+}
+
+/* Dark theme */
+.dark-theme {
+  background-color: #1a1a1a;
+  color: #f0f0f0;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid;
+  transition: border-color 0.3s;
+}
+
+.light-theme .panel-header {
+  border-color: #eaeaea;
+}
+
+.dark-theme .panel-header {
+  border-color: #333333;
+}
+
+.found-text {
+  font-weight: 500;
+}
+
+.light-theme .found-text {
+  color: #555;
+}
+
+.dark-theme .found-text {
+  color: #bbbbbb;
+}
+
+.sort-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sort-select {
+  padding: 6px 10px;
+  border: 1px solid;
+  border-radius: 4px;
+  font-size: 14px;
+  transition:
+    background-color 0.3s,
+    color 0.3s,
+    border-color 0.3s;
+}
+
+.light-theme .sort-select {
+  background-color: #f5f5f5;
+  color: #333;
+  border-color: #ccc;
+}
+
+.dark-theme .sort-select {
+  background-color: #333333;
+  color: #f0f0f0;
+  border-color: #444444;
+}
+
+.theme-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  padding: 4px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.3s;
+}
+
+.light-theme .theme-toggle {
+  background-color: transparent;
+}
+
+.dark-theme .theme-toggle {
+  background-color: transparent;
+}
+
+.theme-toggle:hover {
+  opacity: 0.8;
+}
+
+.links-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.link-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  border-radius: 6px;
+  transition: background-color 0.3s;
+  position: relative;
+}
+
+.light-theme .link-item {
+  background-color: #f9f9f9;
+}
+
+.light-theme .link-item:hover {
+  background-color: #f0f0f0;
+}
+
+.dark-theme .link-item {
+  background-color: #2a2a2a;
+}
+
+.dark-theme .link-item:hover {
+  background-color: #333333;
+}
+
+.link-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.link-title {
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.light-theme .link-title {
+  color: #555;
+}
+
+.dark-theme .link-title {
+  color: #dddddd;
+}
+
+.link-details {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.link-size {
+  min-width: 70px;
+}
+
+.light-theme .link-size {
+  color: #1a73e8;
+}
+
+.dark-theme .link-size {
+  color: #64b5f6;
+}
+
+.link-seeders {
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.light-theme .link-seeders {
+  background-color: #c8e6c9;
+  color: #2e7d32;
+}
+
+.dark-theme .link-seeders {
+  background-color: #2e7d32;
+  color: #c8e6c9;
+}
+
+.link-peers {
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.light-theme .link-peers {
+  background-color: #bbdefb;
+  color: #1976d2;
+}
+
+.dark-theme .link-peers {
+  background-color: #1976d2;
+  color: #bbdefb;
+}
+
+.fetch-button {
+  border: none;
+  padding: 2px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.light-theme .fetch-button {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.dark-theme .fetch-button {
+  background-color: #856404;
+  color: #fff3cd;
+}
+
+.more-options {
+  background: none;
+  border: none;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0 4px;
+  line-height: 1;
+}
+
+.light-theme .more-options {
+  color: #666;
+}
+
+.dark-theme .more-options {
+  color: #aaaaaa;
+}
+
+.add-button {
+  border: none;
+  padding: 4px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: background-color 0.2s;
+  margin-left: 10px;
+}
+
+.light-theme .add-button {
+  background-color: #90a4ae;
+  color: white;
+}
+
+.light-theme .add-button:hover {
+  background-color: #78909c;
+}
+
+.dark-theme .add-button {
+  background-color: #455a64;
+  color: white;
+}
+
+.dark-theme .add-button:hover {
+  background-color: #546e7a;
+}
+
+/* Tooltip styling for magnet link title */
+.link-item:hover .tooltip {
+  display: block;
+}
+
+.tooltip {
+  display: none;
+  position: absolute;
+  padding: 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  z-index: 100;
+  bottom: 100%;
+  left: 0;
+  white-space: nowrap;
+}
+
+.light-theme .tooltip {
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+}
+
+.dark-theme .tooltip {
+  background-color: rgba(255, 255, 255, 0.8);
+  color: black;
 }
