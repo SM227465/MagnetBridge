@@ -1,6 +1,6 @@
 import { useStorage, withErrorBoundary, withSuspense } from '@extension/shared';
 import { exampleThemeStorage } from '@extension/storage';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, ChangeEvent } from 'react';
 import '@src/SidePanel.css';
 
 interface MagnetLink {
@@ -14,10 +14,12 @@ interface MagnetLink {
   actualSize?: number;
 }
 
+type SortOption = '' | 'size-asc' | 'size-desc' | 'name-asc' | 'name-desc' | 'seeds-desc' | 'seeds-asc';
+
 const SidePanel = () => {
   const theme = useStorage(exampleThemeStorage);
   const [magnetLinks, setMagnetLinks] = useState<MagnetLink[]>([]);
-  const [sortOption, setSortOption] = useState('');
+  const [sortOption, setSortOption] = useState<SortOption>('');
 
   const isLight = theme === 'light';
 
@@ -52,9 +54,61 @@ const SidePanel = () => {
     }
   }, [isLight]);
 
-  const handleSortChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSortOption(e.target.value);
-    // Implement sorting logic here
+  const sortTorrentList = (links: MagnetLink[], sortBy: SortOption): MagnetLink[] => {
+    if (!links || !links.length) return [];
+
+    const sortedLinks = [...links];
+
+    switch (sortBy) {
+      case 'size-asc':
+        return sortedLinks.sort((a, b) => {
+          if (!a.actualSize) return 1;
+          if (!b.actualSize) return -1;
+          return a.actualSize - b.actualSize;
+        });
+
+      case 'size-desc':
+        return sortedLinks.sort((a, b) => {
+          if (!a.actualSize) return 1;
+          if (!b.actualSize) return -1;
+          return b.actualSize - a.actualSize;
+        });
+
+      case 'name-asc':
+        return sortedLinks.sort((a, b) => {
+          const titleA = a.title.toLowerCase();
+          const titleB = b.title.toLowerCase();
+          return titleA.localeCompare(titleB);
+        });
+
+      case 'name-desc':
+        return sortedLinks.sort((a, b) => {
+          const titleA = a.title.toLowerCase();
+          const titleB = b.title.toLowerCase();
+          return titleB.localeCompare(titleA);
+        });
+
+      case 'seeds-desc':
+        return sortedLinks.sort((a, b) => {
+          const seedsA = typeof a.seeds === 'string' ? parseInt(a.seeds as string, 10) || 0 : a.seeds || 0;
+          const seedsB = typeof b.seeds === 'string' ? parseInt(b.seeds as string, 10) || 0 : b.seeds || 0;
+          return seedsB - seedsA;
+        });
+
+      case 'seeds-asc':
+        return sortedLinks.sort((a, b) => {
+          const seedsA = typeof a.seeds === 'string' ? parseInt(a.seeds as string, 10) || 0 : a.seeds || 0;
+          const seedsB = typeof b.seeds === 'string' ? parseInt(b.seeds as string, 10) || 0 : b.seeds || 0;
+          return seedsA - seedsB;
+        });
+
+      default:
+        return sortedLinks;
+    }
+  };
+
+  const handleSortChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    setSortOption(event.target.value as SortOption);
   };
 
   const handleFetch = (id: string) => {
@@ -76,6 +130,9 @@ const SidePanel = () => {
     exampleThemeStorage.toggle();
   };
 
+  // Apply sorting to the magnetLinks
+  const sortedMagnetLinks = sortOption ? sortTorrentList(magnetLinks, sortOption) : magnetLinks;
+
   return (
     <div className={`side-panel ${isLight ? 'light-theme' : 'dark-theme'}`}>
       <div className="panel-header">
@@ -83,12 +140,16 @@ const SidePanel = () => {
           {magnetLinks.length} magnet {magnetLinks.length > 1 ? 'links' : 'link'}
         </span>
         <div className="sort-container">
-          <select className="sort-select" value={sortOption} onChange={handleSortChange}>
-            <option value="">Sort by</option>
-            <option value="size">Size</option>
-            <option value="seeders">Seeders</option>
-            <option value="peers">Peers</option>
-            <option value="name">Name</option>
+          <select value={sortOption} onChange={handleSortChange} className="sort-select">
+            <option value="" disabled>
+              Sort by
+            </option>
+            <option value="size-asc">Size: Small to Big</option>
+            <option value="size-desc">Size: Big to Small</option>
+            <option value="name-asc">Name: A to Z</option>
+            <option value="name-desc">Name: Z to A</option>
+            <option value="seeds-desc">Seed: High to Low</option>
+            <option value="seeds-asc">Seed: Low to High</option>
           </select>
           <button className="theme-toggle" onClick={toggleTheme} title={`Switch to ${isLight ? 'dark' : 'light'} mode`}>
             {isLight ? '🌙' : '☀️'}
@@ -97,7 +158,7 @@ const SidePanel = () => {
       </div>
 
       <div className="links-container">
-        {magnetLinks.map((link, index) => (
+        {sortedMagnetLinks.map((link, index) => (
           <div key={link.id} className="link-item">
             <div className="link-content">
               <div className="link-title">
