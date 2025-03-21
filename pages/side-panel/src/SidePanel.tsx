@@ -4,62 +4,42 @@ import { useEffect, useState } from 'react';
 import '@src/SidePanel.css';
 
 interface MagnetLink {
-  id: number;
+  id: string;
+  url: string;
   title: string;
-  size: string;
-  seeders: number;
-  peers: number;
+  formatedSize?: string;
+  seeds?: number | string;
+  peers?: number | string;
+  timestamp: number;
+  actualSize?: number;
 }
 
 const SidePanel = () => {
   const theme = useStorage(exampleThemeStorage);
-  const isLight = theme === 'light';
-  const [magnetLinks, setMagnetLinks] = useState<MagnetLink[]>([
-    {
-      id: 1,
-      title: 'Avengers.Endgame.2019.1080p.BRRip.x264',
-      size: '3.01 GB',
-      seeders: 506,
-      peers: 108,
-    },
-    {
-      id: 2,
-      title: 'Avengers.Infinity.War.2018.1080p.BRRip.x264',
-      size: '2.39 GB',
-      seeders: 413,
-      peers: 110,
-    },
-    {
-      id: 3,
-      title: 'Avengers: Age of Ultron (2015) 1080p',
-      size: '2.05 GB',
-      seeders: 283,
-      peers: 338,
-    },
-    {
-      id: 4,
-      title: 'The Avengers 2012 1080p BRrip X264',
-      size: '2.20 GB',
-      seeders: 279,
-      peers: 77,
-    },
-    {
-      id: 5,
-      title: 'Avengers Endgame (2019) [BluRay]',
-      size: '1.43 GB',
-      seeders: 199,
-      peers: 66,
-    },
-    {
-      id: 6,
-      title: 'The Avengers 2012 720p BRrip X264',
-      size: '1023.45 MB',
-      seeders: 100,
-      peers: 27,
-    },
-  ]);
-
+  const [magnetLinks, setMagnetLinks] = useState<MagnetLink[]>([]);
   const [sortOption, setSortOption] = useState('');
+
+  const isLight = theme === 'light';
+
+  useEffect(() => {
+    const messageHandler = (message: any) => {
+      if (message?.['type'] === 'MAGNET_LINKS_FOUND') {
+        setMagnetLinks(message.payload);
+      }
+    };
+
+    chrome.runtime.onMessage.addListener(messageHandler);
+
+    chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
+      if (tabs[0]?.id) {
+        chrome.tabs.sendMessage(tabs[0].id, { type: 'GET_MAGNET_LINKS' });
+      }
+    });
+
+    return () => {
+      chrome.runtime.onMessage.removeListener(messageHandler);
+    };
+  }, []);
 
   useEffect(() => {
     const htmlElement = document.documentElement;
@@ -77,17 +57,17 @@ const SidePanel = () => {
     // Implement sorting logic here
   };
 
-  const handleFetch = (id: number) => {
+  const handleFetch = (id: string) => {
     console.log(`Fetching magnet link with id: ${id}`);
     // Implement fetch logic here
   };
 
-  const handleAdd = (id: number) => {
+  const handleAdd = (id: string) => {
     console.log(`Adding magnet link with id: ${id}`);
     // Implement add logic here
   };
 
-  const handleMoreOptions = (id: number) => {
+  const handleMoreOptions = (id: string) => {
     console.log(`More options for magnet link with id: ${id}`);
     // Implement more options logic here
   };
@@ -99,7 +79,9 @@ const SidePanel = () => {
   return (
     <div className={`side-panel ${isLight ? 'light-theme' : 'dark-theme'}`}>
       <div className="panel-header">
-        <span className="found-text">Found {magnetLinks.length} magnet links</span>
+        <span className="found-text">
+          {magnetLinks.length} magnet {magnetLinks.length > 1 ? 'links' : 'link'}
+        </span>
         <div className="sort-container">
           <select className="sort-select" value={sortOption} onChange={handleSortChange}>
             <option value="">Sort by</option>
@@ -115,15 +97,15 @@ const SidePanel = () => {
       </div>
 
       <div className="links-container">
-        {magnetLinks.map(link => (
+        {magnetLinks.map((link, index) => (
           <div key={link.id} className="link-item">
             <div className="link-content">
               <div className="link-title">
-                {link.id}. {link.title}
+                {index + 1}. {link.title}
               </div>
               <div className="link-details">
-                <span className="link-size">{link.size}</span>
-                <span className="link-seeders">S: {link.seeders}</span>
+                <span className="link-size">{link?.actualSize ? link.formatedSize : 'Size: Unknown'}</span>
+                <span className="link-seeders">S: {link?.seeds}</span>
                 <span className="link-peers">P: {link.peers}</span>
                 <button className="fetch-button" onClick={() => handleFetch(link.id)}>
                   Fetch
