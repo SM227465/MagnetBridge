@@ -34,4 +34,4 @@ export interface AppState {
   };
 }
 
-export type SupportedCTSP = '' | 'putio' | 'seedr' | 'torbox' | 'bitport' | 'custom';
+export type SupportedCTSP = '' | 'real-debrid' | 'putio' | 'seedr' | 'torbox' | 'bitport' | 'custom';

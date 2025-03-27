@@ -5,7 +5,7 @@ import EmptyState from './components/empty-state/EmptyState';
 import MagnetLinkList from './components/magnet-link-list/MagnetLinkList';
 import Notification from './components/notification/Notification';
 import { AppState, CloudService, MagnetLink } from './interface';
-import { addToSeedr, addToTorbox } from './utils';
+import { addToRealdebrid, addToSeedr, addToTorbox } from './utils';
 import '@src/Popup.css';
 
 const Popup = () => {
@@ -175,6 +175,10 @@ const Popup = () => {
     switch (service.type) {
       case 'torbox':
         res = await addToTorbox(service, magnetUrl);
+        break;
+
+      case 'real-debrid':
+        res = await addToRealdebrid(service, magnetUrl);
         break;
 
       case 'putio':

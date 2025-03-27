@@ -5,6 +5,7 @@ import Torbox from '../service-provider/Torbox';
 import Seedr from '../service-provider/Seedr';
 import { SUPPORTED_CTSP } from '@src/data/supported-sp';
 import './CloudServiceConfig.css';
+import Realdebrid from '../service-provider/Realdebrid';
 
 interface CloudServiceConfigProps {
   services: CloudService[];
@@ -112,6 +113,9 @@ const CloudServiceConfig: React.FC<CloudServiceConfigProps> = ({ services, onAdd
 
               {selectedServiceProvider === 'torbox' && <Torbox formData={formData} setFormData={setFormData} />}
               {selectedServiceProvider === 'seedr' && <Seedr formData={formData} setFormData={setFormData} />}
+              {selectedServiceProvider === 'real-debrid' && (
+                <Realdebrid formData={formData} setFormData={setFormData} />
+              )}
 
               {selectedServiceProvider && (
                 <p className="note">
