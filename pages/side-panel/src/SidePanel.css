@@ -273,6 +273,10 @@
   margin-left: 10px;
 }
 
+.add-button:disabled {
+  cursor: not-allowed;
+}
+
 .light-theme .add-button {
   background-color: #90a4ae;
   color: white;

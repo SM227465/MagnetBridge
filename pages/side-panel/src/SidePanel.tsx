@@ -20,10 +20,16 @@ const SidePanel = () => {
   const theme = useStorage(exampleThemeStorage);
   const [magnetLinks, setMagnetLinks] = useState<MagnetLink[]>([]);
   const [sortOption, setSortOption] = useState<SortOption>('');
+  const [cloudServices, setCloudServices] = useState<object[]>([]);
 
   const isLight = theme === 'light';
 
   useEffect(() => {
+    // Initialize state from chrome.storage
+    chrome.storage.sync.get(['cloudServices'], result => {
+      setCloudServices(result.cloudServices || []);
+    });
+
     const messageHandler = (message: any) => {
       if (message?.['type'] === 'MAGNET_LINKS_FOUND') {
         setMagnetLinks(message.payload);
@@ -117,6 +123,8 @@ const SidePanel = () => {
   };
 
   const handleAdd = (id: string) => {
+    console.log({ cloudServices });
+
     console.log(`Adding magnet link with id: ${id}`);
     // Implement add logic here
   };
@@ -176,7 +184,7 @@ const SidePanel = () => {
                 </button>
               </div>
             </div>
-            <button className="add-button" onClick={() => handleAdd(link.id)}>
+            <button className="add-button" onClick={() => handleAdd(link.id)} disabled={cloudServices.length < 1}>
               Add
             </button>
           </div>
