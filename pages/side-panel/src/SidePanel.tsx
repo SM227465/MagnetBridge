@@ -1,26 +1,26 @@
-import { useStorage, withErrorBoundary, withSuspense } from '@extension/shared';
+import {
+  addToCloudService,
+  CloudService,
+  fetchTorrentInfo,
+  INotification,
+  MagnetLink,
+  SortOption,
+  sortTorrentList,
+  useStorage,
+  withErrorBoundary,
+  withSuspense,
+} from '@extension/shared';
 import { exampleThemeStorage } from '@extension/storage';
 import { useEffect, useState, ChangeEvent } from 'react';
 import '@src/SidePanel.css';
-
-interface MagnetLink {
-  id: string;
-  url: string;
-  title: string;
-  formatedSize?: string;
-  seeds?: number | string;
-  peers?: number | string;
-  timestamp: number;
-  actualSize?: number;
-}
-
-type SortOption = '' | 'size-asc' | 'size-desc' | 'name-asc' | 'name-desc' | 'seeds-desc' | 'seeds-asc';
+import Notification from './components/notification/Notification';
 
 const SidePanel = () => {
   const theme = useStorage(exampleThemeStorage);
   const [magnetLinks, setMagnetLinks] = useState<MagnetLink[]>([]);
   const [sortOption, setSortOption] = useState<SortOption>('');
-  const [cloudServices, setCloudServices] = useState<object[]>([]);
+  const [cloudServices, setCloudServices] = useState<CloudService[]>([]);
+  const [notification, setNotification] = useState({} as INotification);
 
   const isLight = theme === 'light';
 
@@ -60,73 +60,46 @@ const SidePanel = () => {
     }
   }, [isLight]);
 
-  const sortTorrentList = (links: MagnetLink[], sortBy: SortOption): MagnetLink[] => {
-    if (!links || !links.length) return [];
-
-    const sortedLinks = [...links];
-
-    switch (sortBy) {
-      case 'size-asc':
-        return sortedLinks.sort((a, b) => {
-          if (!a.actualSize) return 1;
-          if (!b.actualSize) return -1;
-          return a.actualSize - b.actualSize;
-        });
-
-      case 'size-desc':
-        return sortedLinks.sort((a, b) => {
-          if (!a.actualSize) return 1;
-          if (!b.actualSize) return -1;
-          return b.actualSize - a.actualSize;
-        });
-
-      case 'name-asc':
-        return sortedLinks.sort((a, b) => {
-          const titleA = a.title.toLowerCase();
-          const titleB = b.title.toLowerCase();
-          return titleA.localeCompare(titleB);
-        });
-
-      case 'name-desc':
-        return sortedLinks.sort((a, b) => {
-          const titleA = a.title.toLowerCase();
-          const titleB = b.title.toLowerCase();
-          return titleB.localeCompare(titleA);
-        });
-
-      case 'seeds-desc':
-        return sortedLinks.sort((a, b) => {
-          const seedsA = typeof a.seeds === 'string' ? parseInt(a.seeds as string, 10) || 0 : a.seeds || 0;
-          const seedsB = typeof b.seeds === 'string' ? parseInt(b.seeds as string, 10) || 0 : b.seeds || 0;
-          return seedsB - seedsA;
-        });
-
-      case 'seeds-asc':
-        return sortedLinks.sort((a, b) => {
-          const seedsA = typeof a.seeds === 'string' ? parseInt(a.seeds as string, 10) || 0 : a.seeds || 0;
-          const seedsB = typeof b.seeds === 'string' ? parseInt(b.seeds as string, 10) || 0 : b.seeds || 0;
-          return seedsA - seedsB;
-        });
-
-      default:
-        return sortedLinks;
-    }
-  };
-
   const handleSortChange = (event: ChangeEvent<HTMLSelectElement>) => {
     setSortOption(event.target.value as SortOption);
   };
 
-  const handleFetch = (id: string) => {
-    console.log(`Fetching magnet link with id: ${id}`);
-    // Implement fetch logic here
+  const handleFetch = async (magnetLink: MagnetLink) => {
+    const res = await fetchTorrentInfo(magnetLink);
+
+    if (res?.success && res?.data !== null) {
+      const updatedLinks = magnetLinks.map(link =>
+        link.id === magnetLink.id
+          ? {
+              ...link,
+              title: res?.data!.name!,
+              actualSize: res.data!.totalSize,
+              formatedSize: res.data!.formatedSize,
+              peers: res.data!.peers,
+            }
+          : link,
+      );
+
+      setMagnetLinks(updatedLinks);
+    }
   };
 
-  const handleAdd = (id: string) => {
-    console.log({ cloudServices });
+  const handleAdd = async (magnetUrl: string) => {
+    if (!cloudServices.length) {
+      showNotification('Please configure a cloud service first', 'error');
+      return;
+    }
 
-    console.log(`Adding magnet link with id: ${id}`);
-    // Implement add logic here
+    try {
+      const res = await addToCloudService(magnetUrl, cloudServices[0]);
+
+      showNotification(res.message, res.success ? 'success' : 'error');
+    } catch (error) {
+      showNotification(
+        error instanceof Error ? error.message : `Failed to add torrent to ${cloudServices[0].name}`,
+        'error',
+      );
+    }
   };
 
   const handleMoreOptions = (id: string) => {
@@ -138,7 +111,14 @@ const SidePanel = () => {
     exampleThemeStorage.toggle();
   };
 
-  // Apply sorting to the magnetLinks
+  const showNotification = (message: string, type: 'success' | 'error' | 'info') => {
+    setNotification({ show: true, message, type });
+
+    setTimeout(() => {
+      setNotification(prevState => ({ ...prevState, show: false }));
+    }, 3000);
+  };
+
   const sortedMagnetLinks = sortOption ? sortTorrentList(magnetLinks, sortOption) : magnetLinks;
 
   return (
@@ -176,7 +156,7 @@ const SidePanel = () => {
                 <span className="link-size">{link?.actualSize ? link.formatedSize : 'Size: Unknown'}</span>
                 <span className="link-seeders">S: {link?.seeds}</span>
                 <span className="link-peers">P: {link.peers}</span>
-                <button className="fetch-button" onClick={() => handleFetch(link.id)}>
+                <button className="fetch-button" onClick={() => handleFetch(link)}>
                   Fetch
                 </button>
                 <button className="more-options" onClick={() => handleMoreOptions(link.id)}>
@@ -184,12 +164,13 @@ const SidePanel = () => {
                 </button>
               </div>
             </div>
-            <button className="add-button" onClick={() => handleAdd(link.id)} disabled={cloudServices.length < 1}>
+            <button className="add-button" onClick={() => handleAdd(link.url)} disabled={cloudServices.length < 1}>
               Add
             </button>
           </div>
         ))}
       </div>
+      {notification.show && <Notification message={notification.message} type={notification.type} />}
     </div>
   );
 };
