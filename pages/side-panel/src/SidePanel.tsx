@@ -22,6 +22,8 @@ const SidePanel = () => {
   const [cloudServices, setCloudServices] = useState<CloudService[]>([]);
   const [notification, setNotification] = useState({} as INotification);
   const [isFetching, setIsFetching] = useState(false);
+  const [addStatus, setAddStatus] = useState<Record<string, 'idle' | 'adding' | 'added'>>({});
+  const [fetchStatus, setFetchStatus] = useState<Record<string, 'idle' | 'fetching' | 'fetched'>>({});
 
   const isLight = theme === 'light';
 
@@ -66,7 +68,8 @@ const SidePanel = () => {
   };
 
   const handleFetch = async (magnetLink: MagnetLink) => {
-    setIsFetching(true);
+    const id = magnetLink.id;
+    setFetchStatus(prev => ({ ...prev, [id]: 'fetching' }));
 
     const res = await fetchTorrentInfo(magnetLink);
 
@@ -75,7 +78,7 @@ const SidePanel = () => {
         link.id === magnetLink.id
           ? {
               ...link,
-              title: res?.data!.name!,
+              title: res.data!.name!,
               actualSize: res.data!.totalSize,
               formatedSize: res.data!.formatedSize,
               peers: res.data!.peers,
@@ -84,25 +87,36 @@ const SidePanel = () => {
       );
 
       setMagnetLinks(updatedLinks);
-      setIsFetching(false);
+      setFetchStatus(prev => ({ ...prev, [id]: 'fetched' }));
+      showNotification(res.message, res.success ? 'success' : 'error');
+    } else {
+      setFetchStatus(prev => ({ ...prev, [id]: 'idle' }));
+      showNotification(res.message, 'error');
     }
   };
 
-  const handleAdd = async (magnetUrl: string) => {
+  const handleAdd = async (magnetLink: MagnetLink) => {
     if (!cloudServices.length) {
       showNotification('Please configure a cloud service first', 'error');
       return;
     }
 
+    const id = magnetLink.id;
+    setAddStatus(prev => ({ ...prev, [id]: 'adding' }));
+
     try {
-      const res = await addToCloudService(magnetUrl, cloudServices[0]);
+      const res = await addToCloudService(magnetLink.url, cloudServices[0]);
+      const status: 'added' | 'idle' = res.success ? 'added' : 'idle';
 
       showNotification(res.message, res.success ? 'success' : 'error');
+
+      setAddStatus(prev => ({ ...prev, [id]: status }));
     } catch (error) {
       showNotification(
         error instanceof Error ? error.message : `Failed to add torrent to ${cloudServices[0].name}`,
         'error',
       );
+      setAddStatus(prev => ({ ...prev, [id]: 'idle' }));
     }
   };
 
@@ -160,16 +174,26 @@ const SidePanel = () => {
                 <span className="link-size">{link?.actualSize ? link.formatedSize : 'Size: Unknown'}</span>
                 <span className="link-seeders">S: {link?.seeds}</span>
                 <span className="link-peers">P: {link.peers}</span>
-                <button className="fetch-button" onClick={() => handleFetch(link)} disabled={isFetching}>
-                  Fetch
+                <button
+                  className="fetch-button"
+                  onClick={() => handleFetch(link)}
+                  disabled={fetchStatus[link.id] === 'fetching' || fetchStatus[link.id] === 'fetched'}>
+                  {fetchStatus[link.id] === 'fetching'
+                    ? 'Fetching...'
+                    : fetchStatus[link.id] === 'fetched'
+                      ? 'Fetched'
+                      : 'Fetch'}
                 </button>
                 <button className="more-options" onClick={() => handleMoreOptions(link.id)}>
                   •••
                 </button>
               </div>
             </div>
-            <button className="add-button" onClick={() => handleAdd(link.url)} disabled={cloudServices.length < 1}>
-              Add
+            <button
+              className="add-button"
+              onClick={() => handleAdd(link)}
+              disabled={cloudServices.length < 1 || addStatus[link.id] === 'adding' || addStatus[link.id] === 'added'}>
+              {addStatus[link.id] === 'adding' ? 'Adding...' : addStatus[link.id] === 'added' ? 'Added' : 'Add'}
             </button>
           </div>
         ))}

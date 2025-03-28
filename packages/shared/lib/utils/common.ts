@@ -248,7 +248,12 @@ export const fetchTorrentInfo = async (
     });
 
     const res = await response.json();
-    return { success: res?.['success'], message: 'Torrent metadata fetched successfully', data: res?.['data'] };
+
+    return {
+      success: res?.['success'],
+      message: res?.['error'] || res?.['message'] || 'Torrent metadata fetched successfully',
+      data: res?.['data'],
+    };
   } catch (error) {
     return { success: false, message: error instanceof Error ? error.message : String(error), data: null };
   }
