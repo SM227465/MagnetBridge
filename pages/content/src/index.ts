@@ -14,6 +14,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 window.addEventListener('load', () => {
   const links = findMagnetLinks();
+
   if (links.length > 0) {
     chrome.runtime.sendMessage({
       type: 'MAGNET_LINKS_FOUND',
@@ -21,3 +22,16 @@ window.addEventListener('load', () => {
     });
   }
 });
+
+const observer = new MutationObserver(() => {
+  const links = findMagnetLinks();
+
+  if (links.length > 0) {
+    chrome.runtime.sendMessage({
+      type: 'MAGNET_LINKS_FOUND',
+      payload: links,
+    });
+  }
+});
+
+observer.observe(document.body, { childList: true, subtree: true });

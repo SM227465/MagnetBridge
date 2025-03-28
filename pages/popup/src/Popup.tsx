@@ -1,11 +1,10 @@
-import { withErrorBoundary, withSuspense } from '@extension/shared';
+import { addToCloudService, CloudService, MagnetLink, withErrorBoundary, withSuspense } from '@extension/shared';
 import { useEffect, useState } from 'react';
 import CloudServiceConfig from './components/cloud-service-config/CloudServiceConfig';
 import EmptyState from './components/empty-state/EmptyState';
 import MagnetLinkList from './components/magnet-link-list/MagnetLinkList';
 import Notification from './components/notification/Notification';
-import { AppState, CloudService, MagnetLink } from './interface';
-import { addToSeedr, addToTorbox } from './utils';
+import { AppState } from './interface';
 import '@src/Popup.css';
 
 const Popup = () => {
@@ -96,15 +95,16 @@ const Popup = () => {
   };
 
   const handleAddTorrent = async (link: MagnetLink) => {
-    console.log('Hi');
-
     if (!state.selectedService) {
       showNotification('Please configure a cloud service first', 'error');
       return;
     }
 
     const service = state.cloudServices.find(s => s.id === state.selectedService);
-    if (!service) return;
+
+    if (!service) {
+      return;
+    }
 
     setState(prevState => ({
       ...prevState,
@@ -113,19 +113,10 @@ const Popup = () => {
 
     try {
       const res = await addToCloudService(link.url, service);
-      const successMessage = res?.['detail'] || `Added to ${service.name} successfully`;
 
-      showNotification(successMessage, 'success');
+      showNotification(res.message, res.success ? 'success' : 'error');
     } catch (error) {
-      let errorMessage: string;
-
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      } else {
-        errorMessage = `Failed to add torrent to ${service.name}`;
-      }
-
-      showNotification(errorMessage, 'error');
+      showNotification(error instanceof Error ? error.message : `Failed to add torrent to ${service.name}`, 'error');
     }
 
     setState(prevState => ({
@@ -167,29 +158,6 @@ const Popup = () => {
         },
       }));
     }, 3000);
-  };
-
-  const addToCloudService = async (magnetUrl: string, service: CloudService) => {
-    let res;
-
-    switch (service.type) {
-      case 'torbox':
-        res = await addToTorbox(service, magnetUrl);
-        break;
-
-      case 'putio':
-        break;
-      case 'seedr':
-        res = await addToSeedr(service, magnetUrl);
-        break;
-      default:
-    }
-
-    if (!res?.['success']) {
-      throw new Error(res?.['detail'] || 'Failed to add torrent to cloud service');
-    }
-
-    return await res;
   };
 
   return (
@@ -247,8 +215,6 @@ const Popup = () => {
           onClose={() => setState(prev => ({ ...prev, showConfigModal: false }))}
         />
       )}
-
-      {/* {state.isLoading && <div className="loading-overlay">Processing...</div>} */}
     </div>
   );
 };

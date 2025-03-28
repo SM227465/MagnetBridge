@@ -1,24 +1,4 @@
-export interface MagnetLink {
-  id: string;
-  url: string;
-  title: string;
-  seeds?: number;
-  peers?: number;
-  timestamp: number;
-  actualSize?: number;
-  formatedSize?: string;
-}
-
-export interface CloudService {
-  id: string;
-  name: string;
-  url: string;
-  apiKey?: string;
-  email?: string;
-  password?: string;
-  api: string;
-  type: SupportedCTSP;
-}
+import { CloudService, MagnetLink } from '@extension/shared';
 
 export interface AppState {
   magnetLinks: MagnetLink[];
@@ -33,5 +13,3 @@ export interface AppState {
     type: 'success' | 'error' | 'info';
   };
 }
-
-export type SupportedCTSP = '' | 'putio' | 'seedr' | 'torbox' | 'bitport' | 'custom';

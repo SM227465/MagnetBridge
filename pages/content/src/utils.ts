@@ -75,6 +75,10 @@ const enrichLinkMetadata = (link: MagnetLink): void => {
   if (window.location.hostname === 'thepiratebay.org') {
     collectMetadataFromThepiratebay(link);
   }
+
+  if (window.location.hostname === 'bitsearch.to') {
+    collectMetadataFromBitsearch(link);
+  }
 };
 
 const collectMetadataFromSnowfl = (magnetLink: MagnetLink) => {
@@ -139,6 +143,38 @@ const collectMetadataFromThepiratebay = (magnetLink: MagnetLink) => {
   }
 
   magnetLink.title = listItem.querySelector('.item-name a')?.textContent?.trim() || 'Unnamed torrent';
+};
+
+const collectMetadataFromBitsearch = (magnetLink: MagnetLink) => {
+  const magnetSelector = `a[href^="${magnetLink.url}"]`;
+  const magnetElement = document.querySelector(magnetSelector);
+
+  if (!magnetElement) {
+    return;
+  }
+
+  const card = magnetElement.closest('.card.search-result') as HTMLElement | null;
+
+  if (!card) {
+    return;
+  }
+
+  // Seeds and Peers
+  const seedElement = card.querySelector('img[alt="Seeder"]')?.nextElementSibling;
+  const leechElement = card.querySelector('img[alt="Leecher"]')?.nextElementSibling;
+  magnetLink.seeds = seedElement?.textContent?.trim() || '--';
+  magnetLink.peers = leechElement?.textContent?.trim() || '--';
+
+  // Size
+  const sizeElement = card.querySelector('img[alt="Size"]')?.nextSibling;
+  magnetLink.formatedSize = sizeElement?.textContent?.trim() || '--';
+  magnetLink.actualSize = parseSize(magnetLink.formatedSize);
+
+  // Title
+  if (magnetLink.title === 'Unnamed torrent') {
+    const titleElement = card.querySelector('h5.title a');
+    magnetLink.title = titleElement?.textContent?.trim() || 'Unnamed torrent';
+  }
 };
 
 const parseSize = (sizeStr: string): number => {

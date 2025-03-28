@@ -1,9 +1,8 @@
-import { AppState, CloudService, MagnetLink } from '@src/interface';
+import { AppState } from '@src/interface';
 import { type ChangeEvent, type Dispatch, type SetStateAction, useMemo, useState } from 'react';
 import SpinnerMini from '../spinner-mini/SpinnerMini';
+import { CloudService, fetchTorrentInfo, MagnetLink, SortOption, sortTorrentList } from '@extension/shared';
 import './MagnetLinkList.css';
-
-type SortOption = 'size-asc' | 'size-desc' | 'name-asc' | 'name-desc' | 'seeds-desc' | 'seeds-asc' | '';
 
 interface Props {
   links: MagnetLink[];
@@ -14,59 +13,6 @@ interface Props {
   service: CloudService;
   setState: Dispatch<SetStateAction<AppState>>;
 }
-
-const sortTorrentList = (links: MagnetLink[], sortBy: SortOption): MagnetLink[] => {
-  if (!links || !links.length) return [];
-
-  const sortedLinks = [...links];
-
-  switch (sortBy) {
-    case 'size-asc':
-      return sortedLinks.sort((a, b) => {
-        if (!a.actualSize) return 1;
-        if (!b.actualSize) return -1;
-        return a.actualSize - b.actualSize;
-      });
-
-    case 'size-desc':
-      return sortedLinks.sort((a, b) => {
-        if (!a.actualSize) return 1;
-        if (!b.actualSize) return -1;
-        return b.actualSize - a.actualSize;
-      });
-
-    case 'name-asc':
-      return sortedLinks.sort((a, b) => {
-        const titleA = a.title.toLowerCase();
-        const titleB = b.title.toLowerCase();
-        return titleA.localeCompare(titleB);
-      });
-
-    case 'name-desc':
-      return sortedLinks.sort((a, b) => {
-        const titleA = a.title.toLowerCase();
-        const titleB = b.title.toLowerCase();
-        return titleB.localeCompare(titleA);
-      });
-
-    case 'seeds-desc':
-      return sortedLinks.sort((a, b) => {
-        const seedsA = a.seeds || 0;
-        const seedsB = b.seeds || 0;
-        return seedsB - seedsA;
-      });
-
-    case 'seeds-asc':
-      return sortedLinks.sort((a, b) => {
-        const seedsA = a.seeds || 0;
-        const seedsB = b.seeds || 0;
-        return seedsA - seedsB;
-      });
-
-    default:
-      return sortedLinks;
-  }
-};
 
 const MagnetLinkList = (props: Props) => {
   const { isServiceConfigured, service, links, onAddClick, onCopyClick, onDownloadClick, setState } = props;
@@ -95,47 +41,33 @@ const MagnetLinkList = (props: Props) => {
     }
   };
 
-  const fetchTorrentInfo = async (magnetLink: MagnetLink) => {
-    const api = 'https://node-express-ts.onrender.com/api/v1/torrent/info';
-
+  const getTorrentInfo = async (magnetLink: MagnetLink) => {
     setIsFetching(true);
     setLoadingId(magnetLink.id);
 
-    try {
-      const response = await fetch(api, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ magnetLink: magnetLink.url }),
-      });
+    const res = await fetchTorrentInfo(magnetLink);
 
-      const res = await response.json();
+    if (res?.success && res?.data !== null) {
+      const updatedLinks = links.map(link =>
+        link.id === magnetLink.id
+          ? {
+              ...link,
+              title: res?.data!.name!,
+              actualSize: res.data!.totalSize,
+              formatedSize: res.data!.formatedSize,
+              peers: res.data!.peers,
+            }
+          : link,
+      );
 
-      if (res?.['success']) {
-        const updatedLinks = links.map(link =>
-          link.id === magnetLink.id
-            ? {
-                ...link,
-                title: res.data.name,
-                actualSize: res.data.totalSize,
-                formatedSize: res.data.formatedSize,
-                peers: res.data.peers,
-              }
-            : link,
-        );
-
-        setState(prevState => ({
-          ...prevState,
-          magnetLinks: updatedLinks,
-        }));
-      }
-    } catch (error) {
-      console.log({ error });
-    } finally {
-      setIsFetching(false);
-      setLoadingId(null);
+      setState(prevState => ({
+        ...prevState,
+        magnetLinks: updatedLinks,
+      }));
     }
+
+    setIsFetching(false);
+    setLoadingId(null);
   };
 
   const handleSortChange = (event: ChangeEvent<HTMLSelectElement>) => {
@@ -177,7 +109,7 @@ const MagnetLinkList = (props: Props) => {
                 <span className="badge leech-badge">
                   <button
                     className="fetch-info-btn"
-                    onClick={() => fetchTorrentInfo(link)}
+                    onClick={() => getTorrentInfo(link)}
                     disabled={(isFetching && loadingId === link.id) || Boolean(link?.seeds) || Boolean(link?.peers)}
                     title="Fetch torrent meta-data">
                     {isFetching && loadingId === link.id ? 'Fetching' : 'Fetch'}

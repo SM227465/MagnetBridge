@@ -1,26 +1,226 @@
-import '@src/SidePanel.css';
-import { useStorage, withErrorBoundary, withSuspense } from '@extension/shared';
+import {
+  addToCloudService,
+  CloudService,
+  fetchTorrentInfo,
+  INotification,
+  MagnetLink,
+  SortOption,
+  sortTorrentList,
+  useStorage,
+  withErrorBoundary,
+  withSuspense,
+} from '@extension/shared';
 import { exampleThemeStorage } from '@extension/storage';
-import { ToggleButton } from '@extension/ui';
-import { t } from '@extension/i18n';
+import { useEffect, useState, ChangeEvent } from 'react';
+import '@src/SidePanel.css';
+import Notification from './components/notification/Notification';
 
 const SidePanel = () => {
   const theme = useStorage(exampleThemeStorage);
+  const [magnetLinks, setMagnetLinks] = useState<MagnetLink[]>([]);
+  const [sortOption, setSortOption] = useState<SortOption>('');
+  const [cloudServices, setCloudServices] = useState<CloudService[]>([]);
+  const [notification, setNotification] = useState({} as INotification);
+  const [addStatus, setAddStatus] = useState<Record<string, 'idle' | 'adding' | 'added'>>({});
+  const [fetchStatus, setFetchStatus] = useState<Record<string, 'idle' | 'fetching' | 'fetched'>>({});
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+
   const isLight = theme === 'light';
-  const logo = isLight ? 'side-panel/logo_vertical.svg' : 'side-panel/logo_vertical_dark.svg';
-  const goGithubSite = () => chrome.tabs.create({ url: 'https://github.com/SM227465/MagnetBridge' });
+
+  useEffect(() => {
+    // Initialize state from chrome.storage
+    chrome.storage.sync.get(['cloudServices'], result => {
+      setCloudServices(result.cloudServices || []);
+    });
+
+    const messageHandler = (message: any) => {
+      if (message?.['type'] === 'MAGNET_LINKS_FOUND') {
+        setMagnetLinks(message.payload);
+      }
+    };
+
+    chrome.runtime.onMessage.addListener(messageHandler);
+
+    chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
+      if (tabs[0]?.id) {
+        chrome.tabs.sendMessage(tabs[0].id, { type: 'GET_MAGNET_LINKS' });
+      }
+    });
+
+    return () => {
+      chrome.runtime.onMessage.removeListener(messageHandler);
+    };
+  }, []);
+
+  useEffect(() => {
+    const htmlElement = document.documentElement;
+    if (isLight) {
+      htmlElement.classList.remove('dark-theme');
+      htmlElement.classList.add('light-theme');
+    } else {
+      htmlElement.classList.remove('light-theme');
+      htmlElement.classList.add('dark-theme');
+    }
+  }, [isLight]);
+
+  const onCopyClick = (link: MagnetLink) => {
+    navigator.clipboard.writeText(link.url);
+    showNotification('Magnet URL copied to clipboard', 'success');
+  };
+
+  const onDownloadClick = (link: MagnetLink) => {};
+
+  const handleSortChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    setSortOption(event.target.value as SortOption);
+  };
+
+  const handleFetch = async (magnetLink: MagnetLink) => {
+    const id = magnetLink.id;
+    setFetchStatus(prev => ({ ...prev, [id]: 'fetching' }));
+
+    const res = await fetchTorrentInfo(magnetLink);
+
+    if (res?.success && res?.data !== null) {
+      const updatedLinks = magnetLinks.map(link =>
+        link.id === magnetLink.id
+          ? {
+              ...link,
+              title: res.data!.name!,
+              actualSize: res.data!.totalSize,
+              formatedSize: res.data!.formatedSize,
+              peers: res.data!.peers,
+            }
+          : link,
+      );
+
+      setMagnetLinks(updatedLinks);
+      setFetchStatus(prev => ({ ...prev, [id]: 'fetched' }));
+      showNotification(res.message, res.success ? 'success' : 'error');
+    } else {
+      setFetchStatus(prev => ({ ...prev, [id]: 'idle' }));
+      showNotification(res.message, 'error');
+    }
+  };
+
+  const handleAdd = async (magnetLink: MagnetLink) => {
+    if (!cloudServices.length) {
+      showNotification('Please configure a cloud service first', 'error');
+      return;
+    }
+
+    const id = magnetLink.id;
+    setAddStatus(prev => ({ ...prev, [id]: 'adding' }));
+
+    try {
+      const res = await addToCloudService(magnetLink.url, cloudServices[0]);
+      const status: 'added' | 'idle' = res.success ? 'added' : 'idle';
+
+      showNotification(res.message, res.success ? 'success' : 'error');
+
+      setAddStatus(prev => ({ ...prev, [id]: status }));
+    } catch (error) {
+      showNotification(
+        error instanceof Error ? error.message : `Failed to add torrent to ${cloudServices[0].name}`,
+        'error',
+      );
+      setAddStatus(prev => ({ ...prev, [id]: 'idle' }));
+    }
+  };
+
+  const handleMoreOptions = (id: string) => {
+    setOpenMenuId(openMenuId === id ? null : id);
+  };
+
+  const toggleTheme = () => {
+    exampleThemeStorage.toggle();
+  };
+
+  const showNotification = (message: string, type: 'success' | 'error' | 'info') => {
+    setNotification({ show: true, message, type });
+
+    setTimeout(() => {
+      setNotification(prevState => ({ ...prevState, show: false }));
+    }, 3000);
+  };
+
+  const sortedMagnetLinks = sortOption ? sortTorrentList(magnetLinks, sortOption) : magnetLinks;
 
   return (
-    <div className={`App ${isLight ? 'bg-slate-50' : 'bg-gray-800'}`}>
-      <header className={`App-header ${isLight ? 'text-gray-900' : 'text-gray-100'}`}>
-        <button onClick={goGithubSite}>
-          <img src={chrome.runtime.getURL(logo)} className="App-logo" alt="logo" />
-        </button>
-        <p>
-          Edit <code>pages/side-panel/src/SidePanel.tsx</code>
-        </p>
-        <ToggleButton onClick={exampleThemeStorage.toggle}>{t('toggleTheme')}</ToggleButton>
-      </header>
+    <div className={`side-panel ${isLight ? 'light-theme' : 'dark-theme'}`}>
+      <div className="panel-header">
+        <span className="found-text">
+          {magnetLinks.length} magnet {magnetLinks.length > 1 ? 'links' : 'link'}
+        </span>
+        <div className="sort-container">
+          <select value={sortOption} onChange={handleSortChange} className="sort-select">
+            <option value="" disabled>
+              Sort by
+            </option>
+            <option value="size-asc">Size: Small to Big</option>
+            <option value="size-desc">Size: Big to Small</option>
+            <option value="name-asc">Name: A to Z</option>
+            <option value="name-desc">Name: Z to A</option>
+            <option value="seeds-desc">Seed: High to Low</option>
+            <option value="seeds-asc">Seed: Low to High</option>
+          </select>
+          <button className="theme-toggle" onClick={toggleTheme} title={`Switch to ${isLight ? 'dark' : 'light'} mode`}>
+            {isLight ? '🌙' : '☀️'}
+          </button>
+        </div>
+      </div>
+
+      <div className="links-container">
+        {sortedMagnetLinks.map((link, index) => (
+          <div key={link.id} className="link-item">
+            <div className="link-content">
+              <div className="link-title">
+                {index + 1}. {link.title}
+              </div>
+              <div className="link-details">
+                <span className="link-size">{link?.actualSize ? link.formatedSize : 'Size: Unknown'}</span>
+                <span className="link-seeders">S: {link?.seeds}</span>
+                <span className="link-peers">P: {link.peers}</span>
+                <button
+                  className="fetch-button"
+                  onClick={() => handleFetch(link)}
+                  disabled={fetchStatus[link.id] === 'fetching' || fetchStatus[link.id] === 'fetched'}>
+                  {fetchStatus[link.id] === 'fetching'
+                    ? 'Fetching...'
+                    : fetchStatus[link.id] === 'fetched'
+                      ? 'Fetched'
+                      : 'Fetch'}
+                </button>
+                <button className="more-options" onClick={() => handleMoreOptions(link.id)}>
+                  •••
+                </button>
+              </div>
+              <div className="more-menu">
+                {openMenuId === link.id && (
+                  <div className="dropdown-menu">
+                    <button
+                      onClick={() => {
+                        onCopyClick(link);
+                        setOpenMenuId(null);
+                      }}>
+                      Copy magnet link
+                    </button>
+                    <button disabled onClick={() => onDownloadClick(link)}>
+                      Download (.torrent)
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+            <button
+              className="add-button"
+              onClick={() => handleAdd(link)}
+              disabled={cloudServices.length < 1 || addStatus[link.id] === 'adding' || addStatus[link.id] === 'added'}>
+              {addStatus[link.id] === 'adding' ? 'Adding...' : addStatus[link.id] === 'added' ? 'Added' : 'Add'}
+            </button>
+          </div>
+        ))}
+      </div>
+      {notification.show && <Notification message={notification.message} type={notification.type} />}
     </div>
   );
 };
