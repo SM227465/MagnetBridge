@@ -21,6 +21,7 @@ const SidePanel = () => {
   const [sortOption, setSortOption] = useState<SortOption>('');
   const [cloudServices, setCloudServices] = useState<CloudService[]>([]);
   const [notification, setNotification] = useState({} as INotification);
+  const [isFetching, setIsFetching] = useState(false);
 
   const isLight = theme === 'light';
 
@@ -65,6 +66,8 @@ const SidePanel = () => {
   };
 
   const handleFetch = async (magnetLink: MagnetLink) => {
+    setIsFetching(true);
+
     const res = await fetchTorrentInfo(magnetLink);
 
     if (res?.success && res?.data !== null) {
@@ -81,6 +84,7 @@ const SidePanel = () => {
       );
 
       setMagnetLinks(updatedLinks);
+      setIsFetching(false);
     }
   };
 
@@ -156,7 +160,7 @@ const SidePanel = () => {
                 <span className="link-size">{link?.actualSize ? link.formatedSize : 'Size: Unknown'}</span>
                 <span className="link-seeders">S: {link?.seeds}</span>
                 <span className="link-peers">P: {link.peers}</span>
-                <button className="fetch-button" onClick={() => handleFetch(link)}>
+                <button className="fetch-button" onClick={() => handleFetch(link)} disabled={isFetching}>
                   Fetch
                 </button>
                 <button className="more-options" onClick={() => handleMoreOptions(link.id)}>

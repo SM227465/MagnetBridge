@@ -234,6 +234,10 @@
   font-weight: 500;
 }
 
+.fetch-button:disabled {
+  cursor: not-allowed;
+}
+
 .light-theme .fetch-button {
   background-color: #fff3cd;
   color: #856404;
