@@ -21,9 +21,9 @@ const SidePanel = () => {
   const [sortOption, setSortOption] = useState<SortOption>('');
   const [cloudServices, setCloudServices] = useState<CloudService[]>([]);
   const [notification, setNotification] = useState({} as INotification);
-  const [isFetching, setIsFetching] = useState(false);
   const [addStatus, setAddStatus] = useState<Record<string, 'idle' | 'adding' | 'added'>>({});
   const [fetchStatus, setFetchStatus] = useState<Record<string, 'idle' | 'fetching' | 'fetched'>>({});
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
   const isLight = theme === 'light';
 
@@ -62,6 +62,13 @@ const SidePanel = () => {
       htmlElement.classList.add('dark-theme');
     }
   }, [isLight]);
+
+  const onCopyClick = (link: MagnetLink) => {
+    navigator.clipboard.writeText(link.url);
+    showNotification('Magnet URL copied to clipboard', 'success');
+  };
+
+  const onDownloadClick = (link: MagnetLink) => {};
 
   const handleSortChange = (event: ChangeEvent<HTMLSelectElement>) => {
     setSortOption(event.target.value as SortOption);
@@ -121,8 +128,7 @@ const SidePanel = () => {
   };
 
   const handleMoreOptions = (id: string) => {
-    console.log(`More options for magnet link with id: ${id}`);
-    // Implement more options logic here
+    setOpenMenuId(openMenuId === id ? null : id);
   };
 
   const toggleTheme = () => {
@@ -187,6 +193,22 @@ const SidePanel = () => {
                 <button className="more-options" onClick={() => handleMoreOptions(link.id)}>
                   •••
                 </button>
+              </div>
+              <div className="more-menu">
+                {openMenuId === link.id && (
+                  <div className="dropdown-menu">
+                    <button
+                      onClick={() => {
+                        onCopyClick(link);
+                        setOpenMenuId(null);
+                      }}>
+                      Copy magnet link
+                    </button>
+                    <button disabled onClick={() => onDownloadClick(link)}>
+                      Download (.torrent)
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
             <button
