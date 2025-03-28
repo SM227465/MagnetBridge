@@ -98,9 +98,6 @@ To integrate with services like RealDebrid, AllDebrid, Torbox, Seedr, Bitport, a
 ### 📌 Side Panel View
 ![Side Panel View](./screenshots/sidepanel.png)
 
-
-Make sure these images are committed and pushed to your repository so they render on GitHub.
-
 ---
 
 ## 🤝 Contributing
