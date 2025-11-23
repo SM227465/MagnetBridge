@@ -9,9 +9,10 @@ import {
   useStorage,
   withErrorBoundary,
   withSuspense,
+  decryptCloudServices,
 } from '@extension/shared';
 import { exampleThemeStorage } from '@extension/storage';
-import { useEffect, useState, ChangeEvent } from 'react';
+import { useEffect, useState, ChangeEvent, useRef } from 'react';
 import '@src/SidePanel.css';
 import Notification from './components/notification/Notification';
 
@@ -24,14 +25,35 @@ const SidePanel = () => {
   const [addStatus, setAddStatus] = useState<Record<string, 'idle' | 'adding' | 'added'>>({});
   const [fetchStatus, setFetchStatus] = useState<Record<string, 'idle' | 'fetching' | 'fetched'>>({});
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const menuRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const isLight = theme === 'light';
 
   useEffect(() => {
-    // Initialize state from chrome.storage
-    chrome.storage.sync.get(['cloudServices'], result => {
-      setCloudServices(result.cloudServices || []);
-    });
+    // Initialize state from chrome.storage with decryption
+    const initializeState = async () => {
+      try {
+        chrome.storage.sync.get(['cloudServices'], async result => {
+          let decryptedServices: CloudService[] = [];
+
+          if (result.cloudServices && result.cloudServices.length > 0) {
+            try {
+              // Decrypt the stored services
+              decryptedServices = await decryptCloudServices(result.cloudServices);
+            } catch (error) {
+              console.error('Failed to decrypt cloud services:', error);
+              showNotification('Failed to load cloud services. Please reconfigure.', 'error');
+            }
+          }
+
+          setCloudServices(decryptedServices);
+        });
+      } catch (error) {
+        console.error('Failed to initialize state:', error);
+      }
+    };
+
+    initializeState();
 
     const messageHandler = (message: any) => {
       if (message?.['type'] === 'MAGNET_LINKS_FOUND') {
@@ -43,7 +65,9 @@ const SidePanel = () => {
 
     chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
       if (tabs[0]?.id) {
-        chrome.tabs.sendMessage(tabs[0].id, { type: 'GET_MAGNET_LINKS' });
+        chrome.tabs.sendMessage(tabs[0].id, { type: 'GET_MAGNET_LINKS' }).catch(() => {
+          // Tab might not have content script, silently ignore
+        });
       }
     });
 
@@ -63,12 +87,59 @@ const SidePanel = () => {
     }
   }, [isLight]);
 
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!openMenuId) return;
+
+      const target = event.target as HTMLElement;
+      const menuElement = menuRefs.current[openMenuId];
+
+      // Check if click is on the toggle button - if so, let the toggle handler deal with it
+      if (target.closest('.more-options')) {
+        return;
+      }
+
+      // Check if click is outside the menu - if so, close it
+      if (menuElement && !menuElement.contains(target)) {
+        setOpenMenuId(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [openMenuId]);
+
   const onCopyClick = (link: MagnetLink) => {
     navigator.clipboard.writeText(link.url);
     showNotification('Magnet URL copied to clipboard', 'success');
   };
 
-  const onDownloadClick = (link: MagnetLink) => {};
+  const onDownloadClick = (link: MagnetLink) => {
+    chrome.runtime.sendMessage(
+      {
+        type: 'DOWNLOAD_TORRENT',
+        payload: { url: link.url, filename: `${link.title || 'torrent'}.torrent` },
+      },
+      response => {
+        if (chrome.runtime.lastError) {
+          showNotification('Failed to start download: ' + chrome.runtime.lastError.message, 'error');
+          return;
+        }
+
+        if (response?.success) {
+          showNotification(response.message || 'Torrent download started', 'success');
+        } else {
+          showNotification(response?.error || 'Failed to download torrent', 'error');
+        }
+      },
+    );
+
+    showNotification('Preparing torrent download...', 'info');
+    setOpenMenuId(null); // Close menu after download
+  };
 
   const handleSortChange = (event: ChangeEvent<HTMLSelectElement>) => {
     setSortOption(event.target.value as SortOption);
@@ -194,7 +265,11 @@ const SidePanel = () => {
                   •••
                 </button>
               </div>
-              <div className="more-menu">
+              <div
+                className="more-menu"
+                ref={el => {
+                  menuRefs.current[link.id] = el;
+                }}>
                 {openMenuId === link.id && (
                   <div className="dropdown-menu">
                     <button
@@ -204,9 +279,7 @@ const SidePanel = () => {
                       }}>
                       Copy magnet link
                     </button>
-                    <button disabled onClick={() => onDownloadClick(link)}>
-                      Download (.torrent)
-                    </button>
+                    <button onClick={() => onDownloadClick(link)}>Download (.torrent)</button>
                   </div>
                 )}
               </div>

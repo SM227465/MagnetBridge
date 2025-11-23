@@ -1,15 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-
-interface MagnetLink {
-  id: string;
-  url: string;
-  title: string;
-  formatedSize?: string;
-  seeds?: number | string;
-  peers?: number | string;
-  timestamp: number;
-  actualSize?: number;
-}
+import { sanitizeTorrentMetadata, isValidMagnetLink, normalizeCount, type MagnetLink } from '@extension/shared';
 
 const MAGNET_REGEX = /magnet:\?xt=urn:btih:[a-zA-Z0-9]*/g;
 
@@ -25,11 +15,20 @@ export const findMagnetLinks = (): MagnetLink[] => {
       return;
     }
 
+    // Validate magnet link format
+    if (!isValidMagnetLink(href)) {
+      return;
+    }
+
     foundUrls.add(href);
+    const sanitized = sanitizeTorrentMetadata({
+      title: extractTitleFromMagnet(href),
+    });
+
     links.push({
       id: uuidv4(),
       url: href,
-      title: extractTitleFromMagnet(href),
+      title: sanitized.title,
       timestamp: Date.now(),
       formatedSize: undefined,
       peers: undefined,
@@ -42,12 +41,16 @@ export const findMagnetLinks = (): MagnetLink[] => {
 
   if (magnetMatches) {
     magnetMatches.forEach(url => {
-      if (!foundUrls.has(url)) {
+      if (!foundUrls.has(url) && isValidMagnetLink(url)) {
         foundUrls.add(url);
+        const sanitized = sanitizeTorrentMetadata({
+          title: extractTitleFromMagnet(url),
+        });
+
         links.push({
           id: uuidv4(),
           url,
-          title: extractTitleFromMagnet(url),
+          title: sanitized.title,
           timestamp: Date.now(),
         });
       }
@@ -68,16 +71,30 @@ const extractTitleFromMagnet = (magnetUrl: string): string => {
 };
 
 const enrichLinkMetadata = (link: MagnetLink): void => {
-  if (window.location.hostname === 'snowfl.com') {
-    collectMetadataFromSnowfl(link);
-  }
+  try {
+    if (window.location.hostname === 'snowfl.com') {
+      collectMetadataFromSnowfl(link);
+    } else if (window.location.hostname === 'thepiratebay.org') {
+      collectMetadataFromThepiratebay(link);
+    } else if (window.location.hostname === 'bitsearch.to') {
+      collectMetadataFromBitsearch(link);
+    }
 
-  if (window.location.hostname === 'thepiratebay.org') {
-    collectMetadataFromThepiratebay(link);
-  }
+    // Sanitize all extracted metadata
+    const sanitized = sanitizeTorrentMetadata({
+      title: link.title,
+      seeds: link.seeds,
+      peers: link.peers,
+      formatedSize: link.formatedSize,
+    });
 
-  if (window.location.hostname === 'bitsearch.to') {
-    collectMetadataFromBitsearch(link);
+    link.title = sanitized.title;
+    link.seeds = sanitized.seeds;
+    link.peers = sanitized.peers;
+    link.formatedSize = sanitized.formatedSize;
+  } catch (error) {
+    console.error('Error enriching link metadata:', error);
+    // Keep the link but without metadata
   }
 };
 
@@ -96,8 +113,8 @@ const collectMetadataFromSnowfl = (magnetLink: MagnetLink) => {
     return;
   }
 
-  magnetLink.seeds = resultItem.querySelector('.seed')?.textContent?.trim() || '--';
-  magnetLink.peers = resultItem.querySelector('.leech')?.textContent?.trim() || '--';
+  magnetLink.seeds = normalizeCount(resultItem.querySelector('.seed')?.textContent?.trim());
+  magnetLink.peers = normalizeCount(resultItem.querySelector('.leech')?.textContent?.trim());
   magnetLink.formatedSize = resultItem.querySelector('.size')?.textContent?.trim() || '--';
   magnetLink.actualSize = parseSize(magnetLink.formatedSize);
 
@@ -125,8 +142,8 @@ const collectMetadataFromThepiratebay = (magnetLink: MagnetLink) => {
     return;
   }
 
-  magnetLink.seeds = listItem.querySelector('.item-seed')?.textContent?.trim() || '--';
-  magnetLink.peers = listItem.querySelector('.item-leech')?.textContent?.trim() || '--';
+  magnetLink.seeds = normalizeCount(listItem.querySelector('.item-seed')?.textContent?.trim());
+  magnetLink.peers = normalizeCount(listItem.querySelector('.item-leech')?.textContent?.trim());
 
   const sizeElement = listItem.querySelector('.item-size');
   const hiddenInput = sizeElement?.querySelector('input[name="size"]') as HTMLInputElement | null;
@@ -153,26 +170,58 @@ const collectMetadataFromBitsearch = (magnetLink: MagnetLink) => {
     return;
   }
 
-  const card = magnetElement.closest('.card.search-result') as HTMLElement | null;
+  // Find the parent card container (updated UI structure)
+  const card = magnetElement.closest('div.bg-white, .card.search-result') as HTMLElement | null;
 
   if (!card) {
     return;
   }
 
-  // Seeds and Peers
-  const seedElement = card.querySelector('img[alt="Seeder"]')?.nextElementSibling;
-  const leechElement = card.querySelector('img[alt="Leecher"]')?.nextElementSibling;
-  magnetLink.seeds = seedElement?.textContent?.trim() || '--';
-  magnetLink.peers = leechElement?.textContent?.trim() || '--';
+  // Seeds and Peers (new UI uses FontAwesome icons with text)
+  // Look for fa-arrow-up for seeders
+  const seedIcon = card.querySelector('i.fa-arrow-up');
+  if (seedIcon) {
+    const seedContainer = seedIcon.parentElement;
+    const seedText = seedContainer?.querySelector('span.font-medium')?.textContent?.trim();
+    magnetLink.seeds = normalizeCount(seedText);
+  }
 
-  // Size
-  const sizeElement = card.querySelector('img[alt="Size"]')?.nextSibling;
-  magnetLink.formatedSize = sizeElement?.textContent?.trim() || '--';
-  magnetLink.actualSize = parseSize(magnetLink.formatedSize);
+  // Look for fa-arrow-down for leechers
+  const leechIcon = card.querySelector('i.fa-arrow-down');
+  if (leechIcon) {
+    const leechContainer = leechIcon.parentElement;
+    const leechText = leechContainer?.querySelector('span.font-medium')?.textContent?.trim();
+    magnetLink.peers = normalizeCount(leechText);
+  }
 
-  // Title
+  // Size (look for fa-download icon in the category/stats section)
+  const downloadIcon = card.querySelector('.flex.flex-wrap.items-center.gap-4 i.fa-download');
+  if (downloadIcon) {
+    const sizeContainer = downloadIcon.parentElement;
+    const sizeText = sizeContainer?.querySelector('span:last-child')?.textContent?.trim();
+    if (sizeText) {
+      magnetLink.formatedSize = sizeText;
+      magnetLink.actualSize = parseSize(sizeText);
+    }
+  }
+
+  // Fallback for old UI
+  if (!magnetLink.seeds && !magnetLink.peers) {
+    const seedElement = card.querySelector('img[alt="Seeder"]')?.nextElementSibling;
+    const leechElement = card.querySelector('img[alt="Leecher"]')?.nextElementSibling;
+    magnetLink.seeds = normalizeCount(seedElement?.textContent?.trim());
+    magnetLink.peers = normalizeCount(leechElement?.textContent?.trim());
+  }
+
+  if (!magnetLink.formatedSize || magnetLink.formatedSize === '--') {
+    const sizeElement = card.querySelector('img[alt="Size"]')?.nextSibling;
+    magnetLink.formatedSize = sizeElement?.textContent?.trim() || '--';
+    magnetLink.actualSize = parseSize(magnetLink.formatedSize);
+  }
+
+  // Title (new UI uses h3 > a, old UI uses h5.title a)
   if (magnetLink.title === 'Unnamed torrent') {
-    const titleElement = card.querySelector('h5.title a');
+    const titleElement = card.querySelector('h3 a, h5.title a');
     magnetLink.title = titleElement?.textContent?.trim() || 'Unnamed torrent';
   }
 };
