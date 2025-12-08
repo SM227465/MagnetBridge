@@ -54,8 +54,24 @@ export type TorrentMetadata = {
   files: TorrentFile[];
 };
 
-export const addToCloudService = async (magnetUrl: string, service: CloudService) => {
-  let res = {} as GenericResponse;
+export const addToCloudService = async (magnetUrl: string, service: CloudService): Promise<GenericResponse> => {
+  // Import validation at runtime to avoid circular dependency
+  const { isValidMagnetLink } = await import('./validation.js');
+
+  // Validate inputs
+  if (!magnetUrl || !service) {
+    return { success: false, message: 'Missing required parameters: magnet url or service configuration' };
+  }
+
+  if (!isValidMagnetLink(magnetUrl)) {
+    return { success: false, message: 'Invalid magnet link format' };
+  }
+
+  if (!service.type) {
+    return { success: false, message: 'Service type is not specified' };
+  }
+
+  let res: GenericResponse;
 
   switch (service.type) {
     case 'torbox':
@@ -66,18 +82,28 @@ export const addToCloudService = async (magnetUrl: string, service: CloudService
       res = await addToRealdebrid(service, magnetUrl);
       break;
 
-    case 'putio':
-      break;
     case 'seedr':
       res = await addToSeedr(service, magnetUrl);
       break;
+
+    case 'putio':
+    case 'bitport':
+    case 'custom':
+      res = { success: false, message: `${service.name} integration is not yet implemented` };
+      break;
+
     default:
+      res = { success: false, message: `Unknown service type: ${service.type}` };
   }
 
   return res;
 };
 
 export const addToTorbox = async (service: CloudService, magnetUrl: string): Promise<GenericResponse> => {
+  if (!magnetUrl || !service?.apiKey) {
+    return { success: false, message: 'Missing required parameters: magnet url or API key' };
+  }
+
   const payload = new FormData();
   payload.append('magnet', magnetUrl);
 
@@ -90,17 +116,30 @@ export const addToTorbox = async (service: CloudService, magnetUrl: string): Pro
       body: payload,
     });
 
+    if (!response.ok) {
+      const errorText = await response.text();
+      return { success: false, message: `Failed to add magnet to Torbox: ${response.status} - ${errorText}` };
+    }
+
     const res = await response.json();
 
-    return { success: res?.['success'], message: res?.['detail'] };
+    // Torbox API returns success boolean and detail message
+    if (res?.success === true) {
+      return { success: true, message: res?.detail || 'Torrent added to Torbox successfully' };
+    }
+
+    return { success: false, message: res?.detail || 'Failed to add torrent to Torbox' };
   } catch (error) {
-    return { success: false, message: error instanceof Error ? error.message : String(error) };
+    return {
+      success: false,
+      message: `Error adding magnet to Torbox: ${error instanceof Error ? error.message : String(error)}`,
+    };
   }
 };
 
-export const addToSeedr = async (service: CloudService, magnetUrl: string) => {
+export const addToSeedr = async (service: CloudService, magnetUrl: string): Promise<GenericResponse> => {
   if (!magnetUrl || !service?.email || !service?.password) {
-    throw new Error('Missing required parameters: email, password, or magnet link');
+    return { success: false, message: 'Missing required parameters: email, password, or magnet link' };
   }
 
   const credentials = btoa(`${service.email}:${service.password}`);
@@ -115,11 +154,31 @@ export const addToSeedr = async (service: CloudService, magnetUrl: string) => {
       body: `magnet=${encodeURIComponent(magnetUrl)}`,
     });
 
+    if (!response.ok) {
+      const errorText = await response.text();
+      return { success: false, message: `Failed to add magnet to Seedr: ${response.status} - ${errorText}` };
+    }
+
     const res = await response.json();
 
-    return res;
+    // Seedr API returns different responses based on success
+    // Check for common success indicators
+    if (res?.result === true || res?.code === 200 || res?.user_torrent) {
+      return { success: true, message: 'Torrent added to Seedr successfully' };
+    }
+
+    // Check for error response
+    if (res?.error || res?.result === false) {
+      return { success: false, message: res?.error || 'Failed to add torrent to Seedr' };
+    }
+
+    // If response structure is unknown but we got 200 OK, assume success
+    return { success: true, message: 'Torrent added to Seedr' };
   } catch (error) {
-    return error;
+    return {
+      success: false,
+      message: `Error adding magnet to Seedr: ${error instanceof Error ? error.message : String(error)}`,
+    };
   }
 };
 

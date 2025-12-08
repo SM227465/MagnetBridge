@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { CloudService, SupportedCTSP } from '@src/interface';
 import { type ChangeEvent, type FormEvent, type MouseEvent, useState } from 'react';
+import { validateCloudService } from '@extension/shared';
 import Torbox from '../service-provider/Torbox';
 import Seedr from '../service-provider/Seedr';
 import { SUPPORTED_CTSP } from '@src/data/supported-sp';
@@ -23,6 +24,7 @@ const CloudServiceConfig: React.FC<CloudServiceConfigProps> = ({ services, onAdd
     type: '',
     url: '',
   });
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   const handleTypeChange = (e: ChangeEvent<HTMLSelectElement>) => {
     const ctsp = e.target.value as CloudService['type'];
@@ -44,10 +46,33 @@ const CloudServiceConfig: React.FC<CloudServiceConfigProps> = ({ services, onAdd
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
+
+    // Validate the service configuration
+    const validation = validateCloudService(formData);
+
+    if (!validation.valid) {
+      setValidationErrors(validation.errors);
+      return;
+    }
+
+    // Clear any previous errors
+    setValidationErrors([]);
+
+    // Add the service
     onAdd({
       ...formData,
       id: uuidv4(),
     });
+
+    // Reset form
+    setFormData({
+      name: '',
+      apiKey: '',
+      api: '',
+      type: '',
+      url: '',
+    });
+    setSelectedServiceProvider('');
   };
 
   const navigateToDocsPage = (event: MouseEvent<HTMLAnchorElement>) => {
@@ -89,47 +114,61 @@ const CloudServiceConfig: React.FC<CloudServiceConfigProps> = ({ services, onAdd
             )}
           </div>
 
-          {services.length === 0 && (
-            <form onSubmit={handleSubmit} className="add-service-form">
-              <h3 style={{ marginBottom: 0 }}>Add new service provider</h3>
+          <form onSubmit={handleSubmit} className="add-service-form">
+            <h3 style={{ marginBottom: 0 }}>Add new service provider</h3>
 
-              <div className="form-field">
-                <label>Service providers</label>
-                <select value={formData.type} onChange={handleTypeChange} required>
-                  <option value="" disabled>
-                    Please select a service provider
-                  </option>
-                  {SUPPORTED_CTSP.map(ctsp => (
-                    <option disabled={!ctsp.isAvailable} value={ctsp.value}>
-                      {ctsp.name}
-                    </option>
-                  ))}
-
-                  <option value="custom" disabled>
-                    Custom
-                  </option>
-                </select>
+            {validationErrors.length > 0 && (
+              <div
+                className="validation-errors"
+                style={{
+                  backgroundColor: '#fee',
+                  border: '1px solid #fcc',
+                  borderRadius: '4px',
+                  padding: '8px 12px',
+                  marginBottom: '12px',
+                }}>
+                {validationErrors.map((error, index) => (
+                  <div key={index} style={{ color: '#c00', fontSize: '14px', marginBottom: '4px' }}>
+                    • {error}
+                  </div>
+                ))}
               </div>
+            )}
 
-              {selectedServiceProvider === 'torbox' && <Torbox formData={formData} setFormData={setFormData} />}
-              {selectedServiceProvider === 'seedr' && <Seedr formData={formData} setFormData={setFormData} />}
-              {selectedServiceProvider === 'real-debrid' && (
-                <Realdebrid formData={formData} setFormData={setFormData} />
-              )}
+            <div className="form-field">
+              <label>Service providers</label>
+              <select value={formData.type} onChange={handleTypeChange} required>
+                <option value="" disabled>
+                  Please select a service provider
+                </option>
+                {SUPPORTED_CTSP.map(ctsp => (
+                  <option disabled={!ctsp.isAvailable} value={ctsp.value}>
+                    {ctsp.name}
+                  </option>
+                ))}
 
-              {selectedServiceProvider && (
-                <p className="note">
-                  Key/Secret is stored locally using{' '}
-                  <a href="#" onClick={navigateToDocsPage}>
-                    Chrome Sync Storage
-                  </a>
-                </p>
-              )}
-              <button type="submit" className="submit-button">
-                Add Service
-              </button>
-            </form>
-          )}
+                <option value="custom" disabled>
+                  Custom
+                </option>
+              </select>
+            </div>
+
+            {selectedServiceProvider === 'torbox' && <Torbox formData={formData} setFormData={setFormData} />}
+            {selectedServiceProvider === 'seedr' && <Seedr formData={formData} setFormData={setFormData} />}
+            {selectedServiceProvider === 'real-debrid' && <Realdebrid formData={formData} setFormData={setFormData} />}
+
+            {selectedServiceProvider && (
+              <p className="note">
+                Key/Secret is stored locally using{' '}
+                <a href="#" onClick={navigateToDocsPage}>
+                  Chrome Sync Storage
+                </a>
+              </p>
+            )}
+            <button type="submit" className="submit-button">
+              Add Service
+            </button>
+          </form>
         </div>
       </div>
     </div>

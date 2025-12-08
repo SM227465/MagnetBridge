@@ -1,4 +1,12 @@
-import { addToCloudService, CloudService, MagnetLink, withErrorBoundary, withSuspense } from '@extension/shared';
+import {
+  addToCloudService,
+  CloudService,
+  MagnetLink,
+  withErrorBoundary,
+  withSuspense,
+  encryptCloudServices,
+  decryptCloudServices,
+} from '@extension/shared';
 import { useEffect, useState } from 'react';
 import CloudServiceConfig from './components/cloud-service-config/CloudServiceConfig';
 import EmptyState from './components/empty-state/EmptyState';
@@ -23,67 +31,117 @@ const Popup = () => {
   });
 
   useEffect(() => {
-    // Initialize state from chrome.storage
-    chrome.storage.sync.get(['cloudServices', 'selectedService'], result => {
-      setState(prevState => ({
-        ...prevState,
-        cloudServices: result.cloudServices || [],
-        selectedService: result.selectedService || null,
-        isLoading: false,
-      }));
-    });
+    // Initialize state from chrome.storage with decryption
+    const initializeState = async () => {
+      try {
+        chrome.storage.sync.get(['cloudServices', 'selectedService'], async result => {
+          let decryptedServices: CloudService[] = [];
+
+          if (result.cloudServices && result.cloudServices.length > 0) {
+            try {
+              // Decrypt the stored services
+              decryptedServices = await decryptCloudServices(result.cloudServices);
+            } catch (error) {
+              console.error('Failed to decrypt cloud services:', error);
+              showNotification('Failed to load cloud services. Please reconfigure.', 'error');
+            }
+          }
+
+          setState(prevState => ({
+            ...prevState,
+            cloudServices: decryptedServices,
+            selectedService: result.selectedService || null,
+            isLoading: false,
+          }));
+        });
+      } catch (error) {
+        console.error('Failed to initialize state:', error);
+        setState(prevState => ({
+          ...prevState,
+          isLoading: false,
+        }));
+      }
+    };
+
+    initializeState();
 
     // Listen for magnet links from content script
-    chrome.runtime.onMessage.addListener(message => {
+    const messageListener = (message: { type: string; payload: MagnetLink[] }) => {
       if (message.type === 'MAGNET_LINKS_FOUND') {
         setState(prevState => ({
           ...prevState,
           magnetLinks: message.payload,
         }));
       }
-    });
+    };
+
+    chrome.runtime.onMessage.addListener(messageListener);
 
     // Request magnet links from the current page
     chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
       if (tabs[0]?.id) {
-        chrome.tabs.sendMessage(tabs[0].id, { type: 'GET_MAGNET_LINKS' });
+        chrome.tabs.sendMessage(tabs[0].id, { type: 'GET_MAGNET_LINKS' }).catch(() => {
+          // Tab might not have content script, silently ignore
+        });
       }
     });
+
+    // Cleanup listener on unmount
+    return () => {
+      chrome.runtime.onMessage.removeListener(messageListener);
+    };
   }, []);
 
-  const handleAddCloudService = (service: CloudService) => {
-    const updatedServices = [...state.cloudServices, service];
+  const handleAddCloudService = async (service: CloudService) => {
+    try {
+      const updatedServices = [...state.cloudServices, service];
 
-    setState(prevState => ({
-      ...prevState,
-      cloudServices: updatedServices,
-      selectedService: service.id,
-    }));
+      // Encrypt the services before storing
+      const encryptedServices = await encryptCloudServices(updatedServices);
 
-    chrome.storage.sync.set({
-      cloudServices: updatedServices,
-      selectedService: service.id,
-    });
+      setState(prevState => ({
+        ...prevState,
+        cloudServices: updatedServices, // Keep decrypted in state for use
+        selectedService: service.id,
+      }));
 
-    showNotification(`${service.name} configured successfully`, 'success');
+      // Store encrypted version
+      await chrome.storage.sync.set({
+        cloudServices: encryptedServices,
+        selectedService: service.id,
+      });
+
+      showNotification(`${service.name} configured successfully`, 'success');
+    } catch (error) {
+      console.error('Failed to save cloud service:', error);
+      showNotification('Failed to save cloud service configuration', 'error');
+    }
   };
 
-  const handleRemoveCloudService = (serviceId: string) => {
-    const updatedServices = state.cloudServices.filter(cloudService => cloudService.id !== serviceId);
-    const newSelectedService = updatedServices.length > 0 ? updatedServices[0].id : null;
+  const handleRemoveCloudService = async (serviceId: string) => {
+    try {
+      const updatedServices = state.cloudServices.filter(cloudService => cloudService.id !== serviceId);
+      const newSelectedService = updatedServices.length > 0 ? updatedServices[0].id : null;
 
-    setState(prevState => ({
-      ...prevState,
-      cloudServices: updatedServices,
-      selectedService: newSelectedService,
-    }));
+      // Encrypt the updated services before storing
+      const encryptedServices = await encryptCloudServices(updatedServices);
 
-    chrome.storage.sync.set({
-      cloudServices: updatedServices,
-      selectedService: newSelectedService,
-    });
+      setState(prevState => ({
+        ...prevState,
+        cloudServices: updatedServices,
+        selectedService: newSelectedService,
+      }));
 
-    showNotification('Service removed', 'info');
+      await chrome.storage.sync.set({
+        cloudServices: encryptedServices,
+        selectedService: newSelectedService,
+      });
+
+      showNotification('Service removed', 'info');
+    } catch (error) {
+      console.error('Failed to remove cloud service:', error);
+      showNotification('Failed to remove cloud service', 'error');
+    }
   };
 
   const handleSelectCloudService = (serviceId: string) => {
@@ -126,12 +184,26 @@ const Popup = () => {
   };
 
   const handleDownloadTorrent = (link: MagnetLink) => {
-    chrome.runtime.sendMessage({
-      type: 'DOWNLOAD_TORRENT',
-      payload: { url: link.url, filename: `${link.title || 'torrent'}.torrent` },
-    });
+    chrome.runtime.sendMessage(
+      {
+        type: 'DOWNLOAD_TORRENT',
+        payload: { url: link.url, filename: `${link.title || 'torrent'}.torrent` },
+      },
+      response => {
+        if (chrome.runtime.lastError) {
+          showNotification('Failed to start download: ' + chrome.runtime.lastError.message, 'error');
+          return;
+        }
 
-    showNotification('Downloading torrent file...', 'info');
+        if (response?.success) {
+          showNotification(response.message || 'Torrent download started', 'success');
+        } else {
+          showNotification(response?.error || 'Failed to download torrent', 'error');
+        }
+      },
+    );
+
+    showNotification('Preparing torrent download...', 'info');
   };
 
   const handleCopyMagnet = (link: MagnetLink) => {
@@ -166,17 +238,26 @@ const Popup = () => {
         <h1>Magnet Bridge</h1>
         <div className="service-selector">
           {state.cloudServices.length > 0 ? (
-            <select
-              disabled={Boolean(state.selectedService)}
-              value={state.selectedService || ''}
-              onChange={e => handleSelectCloudService(e.target.value)}
-              className="service-dropdown">
-              {state.cloudServices.map(service => (
-                <option key={service.id} value={service.id}>
-                  {service.name}
+            <>
+              <select
+                value={state.selectedService || ''}
+                onChange={e => handleSelectCloudService(e.target.value)}
+                className="service-dropdown">
+                <option value="" disabled>
+                  Select a service
                 </option>
-              ))}
-            </select>
+                {state.cloudServices.map(service => (
+                  <option key={service.id} value={service.id}>
+                    {service.name}
+                  </option>
+                ))}
+              </select>
+              {state.cloudServices.length > 0 && (
+                <span className="service-count">
+                  ({state.cloudServices.length} {state.cloudServices.length === 1 ? 'service' : 'services'})
+                </span>
+              )}
+            </>
           ) : (
             <span className="no-service">No cloud service configured</span>
           )}
@@ -194,8 +275,8 @@ const Popup = () => {
             onAddClick={handleAddTorrent}
             onDownloadClick={handleDownloadTorrent}
             onCopyClick={handleCopyMagnet}
-            isServiceConfigured={state.cloudServices.length > 0}
-            service={state.cloudServices[0]}
+            isServiceConfigured={state.cloudServices.length > 0 && !!state.selectedService}
+            service={state.cloudServices.find(s => s.id === state.selectedService)}
           />
         ) : (
           <EmptyState

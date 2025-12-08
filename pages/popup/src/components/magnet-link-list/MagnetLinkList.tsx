@@ -1,5 +1,5 @@
 import { AppState } from '@src/interface';
-import { type ChangeEvent, type Dispatch, type SetStateAction, useMemo, useState } from 'react';
+import { type ChangeEvent, type Dispatch, type SetStateAction, useMemo, useState, useEffect, useRef } from 'react';
 import SpinnerMini from '../spinner-mini/SpinnerMini';
 import { CloudService, fetchTorrentInfo, MagnetLink, SortOption, sortTorrentList } from '@extension/shared';
 import './MagnetLinkList.css';
@@ -10,7 +10,7 @@ interface Props {
   onDownloadClick: (link: MagnetLink) => void;
   onCopyClick: (link: MagnetLink) => void;
   isServiceConfigured: boolean;
-  service: CloudService;
+  service?: CloudService;
   setState: Dispatch<SetStateAction<AppState>>;
 }
 
@@ -21,6 +21,7 @@ const MagnetLinkList = (props: Props) => {
   const [isFetching, setIsFetching] = useState(false);
   const [isAding, setIsAding] = useState(false);
   const [sortOption, setSortOption] = useState<SortOption>('');
+  const menuRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const sortedLinks = useMemo(() => {
     return sortTorrentList(links, sortOption);
@@ -73,6 +74,36 @@ const MagnetLinkList = (props: Props) => {
   const handleSortChange = (event: ChangeEvent<HTMLSelectElement>) => {
     setSortOption(event.target.value as SortOption);
   };
+
+  const handleDownloadClick = (link: MagnetLink) => {
+    onDownloadClick(link);
+    setOpenMenuId(null); // Close menu after download
+  };
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!openMenuId) return;
+
+      const target = event.target as HTMLElement;
+      const menuElement = menuRefs.current[openMenuId];
+
+      // Check if click is on the toggle button - if so, let the toggle handler deal with it
+      if (target.closest('.fetch-info-btn[title="Options"]')) {
+        return;
+      }
+
+      // Check if click is outside the menu - if so, close it
+      if (menuElement && !menuElement.contains(target)) {
+        setOpenMenuId(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [openMenuId]);
 
   return (
     <div className="magnet-list">
@@ -131,12 +162,18 @@ const MagnetLinkList = (props: Props) => {
                   className="add-button"
                   onClick={() => handleAddClick(link)}
                   disabled={!isServiceConfigured}
-                  title={isServiceConfigured ? `Add to ${service.name}` : 'Configure a cloud service first'}>
+                  title={
+                    isServiceConfigured ? `Add to ${service?.name || 'Service'}` : 'Configure a cloud service first'
+                  }>
                   Add
                 </button>
               )}
 
-              <div className="more-menu">
+              <div
+                className="more-menu"
+                ref={el => {
+                  menuRefs.current[link.id] = el;
+                }}>
                 {openMenuId === link.id && (
                   <div className="dropdown-menu">
                     <button
@@ -146,9 +183,7 @@ const MagnetLinkList = (props: Props) => {
                       }}>
                       Copy magnet link
                     </button>
-                    <button disabled onClick={() => onDownloadClick(link)}>
-                      Download (.torrent)
-                    </button>
+                    <button onClick={() => handleDownloadClick(link)}>Download (.torrent)</button>
                   </div>
                 )}
               </div>
